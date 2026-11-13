@@ -1,0 +1,157 @@
+{
+  "run_name": "e4_f1_r1",
+  "timestamp_utc": "2026-11-12T07:50:48+00:00",
+  "params": {
+    "train_path": "s3a://ubs-datasets/FRACTAL/data/train/",
+    "val_path": "s3a://ubs-datasets/FRACTAL/data/val/",
+    "test_path": "s3a://ubs-datasets/FRACTAL/data/test/",
+    "fraction": 1.0,
+    "eval_fraction": 1.0,
+    "eval_val": false,
+    "seed": 42,
+    "no_height_norm": false,
+    "model": "rf",
+    "num_trees": 30,
+    "max_depth": 10,
+    "max_bins": 32,
+    "subsampling_rate": 1.0,
+    "use_class_weights": false,
+    "output_dir": "s3://ubs-homes/erasmus/lucas/fractal-results",
+    "repeat": 1,
+    "run_name": null,
+    "no_spark_metrics": false,
+    "save_model": false
+  },
+  "cluster": {
+    "master": "yarn",
+    "n_executors": "4",
+    "executor_cores": "3",
+    "executor_memory": "20g",
+    "driver_memory": "6g",
+    "executors_granted": {
+      "start": 4,
+      "after_preprocessing": 4,
+      "after_training": 4,
+      "end": 4
+    }
+  },
+  "data": {
+    "train_files": 800,
+    "test_files": 100,
+    "train_input_partitions": 37,
+    "test_input_partitions": 41,
+    "train_points": 73577755,
+    "test_points": 9542246
+  },
+  "timings_sec": {
+    "file_listing": 34.213894181999876,
+    "preprocessing": 60.61944536400006,
+    "training": 311.36955973399995,
+    "evaluation": 6.746030710000014,
+    "total": 378.735035808
+  },
+  "class_weights": null,
+  "feature_importances": {
+    "Height": 0.2853542481988205,
+    "Intensity": 0.07919252295786029,
+    "ReturnNumber": 0.06216028662727871,
+    "NumberOfReturns": 0.0908897491322397,
+    "Red": 0.21616126348258521,
+    "Green": 0.03410573414460642,
+    "Blue": 0.02045762519218103,
+    "Infrared": 0.012575054118681457,
+    "NDVI": 0.11268723667636137,
+    "Brightness": 0.08641627946938536
+  },
+  "metrics": {
+    "test": {
+      "overall_accuracy": 0.845305182867849,
+      "mIoU": 0.3873104293515091,
+      "n_classes_in_mIoU": 7,
+      "per_class_iou": {
+        "other": 0.02292628091350136,
+        "ground": 0.6632417007514506,
+        "vegetation": 0.807444570010858,
+        "building": 0.47041163330060753,
+        "water": 0.7471488204841462,
+        "bridge": 0.0,
+        "structure": 0.0
+      },
+      "support": {
+        "other": 65629,
+        "ground": 3450847,
+        "vegetation": 5418680,
+        "building": 379611,
+        "water": 206982,
+        "bridge": 17730,
+        "structure": 2767
+      },
+      "confusion_matrix": [
+        [
+          1550,
+          43018,
+          16968,
+          4069,
+          24,
+          0,
+          0
+        ],
+        [
+          13,
+          2789064,
+          635151,
+          26170,
+          449,
+          0,
+          0
+        ],
+        [
+          1466,
+          488372,
+          4922128,
+          6711,
+          3,
+          0,
+          0
+        ],
+        [
+          484,
+          158308,
+          22453,
+          198366,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          51980,
+          0,
+          0,
+          155002,
+          0,
+          0
+        ],
+        [
+          0,
+          12457,
+          308,
+          4965,
+          0,
+          0,
+          0
+        ],
+        [
+          16,
+          218,
+          2373,
+          160,
+          0,
+          0,
+          0
+        ]
+      ]
+    }
+  },
+  "spark_metrics": {}
+}

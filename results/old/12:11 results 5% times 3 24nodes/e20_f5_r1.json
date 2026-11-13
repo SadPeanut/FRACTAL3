@@ -1,0 +1,551 @@
+{
+  "run_name": "e20_f5_r1",
+  "timestamp_utc": "2026-11-12T09:16:15+00:00",
+  "params": {
+    "train_path": "s3a://ubs-datasets/FRACTAL/data/train/",
+    "val_path": "s3a://ubs-datasets/FRACTAL/data/val/",
+    "test_path": "s3a://ubs-datasets/FRACTAL/data/test/",
+    "fraction": 5.0,
+    "eval_fraction": 5.0,
+    "eval_val": false,
+    "seed": 42,
+    "no_height_norm": false,
+    "model": "rf",
+    "num_trees": 30,
+    "max_depth": 10,
+    "max_bins": 32,
+    "subsampling_rate": 1.0,
+    "use_class_weights": false,
+    "output_dir": "s3://ubs-homes/erasmus/lucas/fractal-results",
+    "repeat": 1,
+    "run_name": null,
+    "no_spark_metrics": false,
+    "save_model": false
+  },
+  "cluster": {
+    "master": "yarn",
+    "n_executors": "20",
+    "executor_cores": "3",
+    "executor_memory": "20g",
+    "driver_memory": "6g",
+    "executors_granted": {
+      "start": 20,
+      "after_preprocessing": 20,
+      "after_training": 20,
+      "end": 20
+    }
+  },
+  "data": {
+    "train_files": 4000,
+    "test_files": 500,
+    "train_input_partitions": 183,
+    "test_input_partitions": 205,
+    "train_points": 367217612,
+    "test_points": 46698291
+  },
+  "timings_sec": {
+    "file_listing": 37.986584872000094,
+    "preprocessing": 68.75172172900056,
+    "training": 354.37673167899993,
+    "evaluation": 7.859131227000034,
+    "total": 430.98758463500053
+  },
+  "class_weights": null,
+  "feature_importances": {
+    "Height": 0.2874467480990959,
+    "Intensity": 0.07059044668073919,
+    "ReturnNumber": 0.06827246098607663,
+    "NumberOfReturns": 0.1084972590439688,
+    "Red": 0.19328234500405073,
+    "Green": 0.032188948556464494,
+    "Blue": 0.006765547945530937,
+    "Infrared": 0.012274526342862295,
+    "NDVI": 0.15631686386656587,
+    "Brightness": 0.06436485347464523
+  },
+  "metrics": {
+    "test": {
+      "overall_accuracy": 0.8396942834588957,
+      "mIoU": 0.38823353109435155,
+      "n_classes_in_mIoU": 7,
+      "per_class_iou": {
+        "other": 0.0072284421538071205,
+        "ground": 0.6878957581530942,
+        "vegetation": 0.7877585856067725,
+        "building": 0.41861824494899774,
+        "water": 0.8161336867977894,
+        "bridge": 0.0,
+        "structure": 0.0
+      },
+      "support": {
+        "other": 399839,
+        "ground": 19174682,
+        "vegetation": 24271022,
+        "building": 2018066,
+        "water": 747319,
+        "bridge": 70378,
+        "structure": 16985
+      },
+      "confusion_matrix": [
+        [
+          2906,
+          197884,
+          179866,
+          18904,
+          279,
+          0,
+          0
+        ],
+        [
+          43,
+          15618019,
+          3345389,
+          192582,
+          18649,
+          0,
+          0
+        ],
+        [
+          1384,
+          2234912,
+          22009002,
+          25465,
+          259,
+          0,
+          0
+        ],
+        [
+          756,
+          936968,
+          123552,
+          956788,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          121746,
+          0,
+          0,
+          625573,
+          0,
+          0
+        ],
+        [
+          0,
+          36145,
+          4910,
+          29323,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1712,
+          14026,
+          1246,
+          0,
+          0,
+          0
+        ]
+      ]
+    }
+  },
+  "spark_metrics": {
+    "preprocessing": {
+      "totals": {
+        "numTasks": 5672,
+        "executorRunTime": 1420284,
+        "executorCpuTime": 1067299,
+        "jvmGCTime": 37896,
+        "schedulerDelayTime": 60304,
+        "shuffleFetchWaitTime": 126,
+        "bytesRead": 8036018546,
+        "shuffleTotalBytesRead": 646223,
+        "shuffleBytesWritten": 646223,
+        "memoryBytesSpilled": 0,
+        "diskBytesSpilled": 0
+      },
+      "executors_used": 20,
+      "hosts_used": 20,
+      "stages": [
+        {
+          "stageId": 0,
+          "n_partitions": 4001,
+          "median_run_ms": 27,
+          "max_run_ms": 528,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 1,
+          "n_partitions": 1,
+          "median_run_ms": 404,
+          "max_run_ms": 404,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 2,
+          "n_partitions": 500,
+          "median_run_ms": 25,
+          "max_run_ms": 102,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 3,
+          "n_partitions": 1,
+          "median_run_ms": 322,
+          "max_run_ms": 322,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 4,
+          "n_partitions": 183,
+          "median_run_ms": 628,
+          "max_run_ms": 2681,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 6,
+          "n_partitions": 1,
+          "median_run_ms": 311,
+          "max_run_ms": 311,
+          "max_shuffle_read_bytes": 556869,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 7,
+          "n_partitions": 183,
+          "median_run_ms": 4814,
+          "max_run_ms": 6868,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 8,
+          "n_partitions": 183,
+          "median_run_ms": 91,
+          "max_run_ms": 243,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 10,
+          "n_partitions": 1,
+          "median_run_ms": 117,
+          "max_run_ms": 117,
+          "max_shuffle_read_bytes": 9150,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 11,
+          "n_partitions": 206,
+          "median_run_ms": 116,
+          "max_run_ms": 585,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 13,
+          "n_partitions": 1,
+          "median_run_ms": 127,
+          "max_run_ms": 127,
+          "max_shuffle_read_bytes": 69954,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 14,
+          "n_partitions": 205,
+          "median_run_ms": 746,
+          "max_run_ms": 2639,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 15,
+          "n_partitions": 205,
+          "median_run_ms": 10,
+          "max_run_ms": 42,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 17,
+          "n_partitions": 1,
+          "median_run_ms": 15,
+          "max_run_ms": 15,
+          "max_shuffle_read_bytes": 10250,
+          "spill_bytes": 0
+        }
+      ]
+    },
+    "training": {
+      "totals": {
+        "numTasks": 4230,
+        "executorRunTime": 17560268,
+        "executorCpuTime": 16953048,
+        "jvmGCTime": 532440,
+        "schedulerDelayTime": 19941,
+        "shuffleFetchWaitTime": 3588,
+        "bytesRead": 884396573931,
+        "shuffleTotalBytesRead": 4206420487,
+        "shuffleBytesWritten": 4205915946,
+        "memoryBytesSpilled": 0,
+        "diskBytesSpilled": 0
+      },
+      "executors_used": 20,
+      "hosts_used": 20,
+      "stages": [
+        {
+          "stageId": 32,
+          "n_partitions": 186,
+          "median_run_ms": 108,
+          "max_run_ms": 984,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 34,
+          "n_partitions": 1,
+          "median_run_ms": 94,
+          "max_run_ms": 94,
+          "max_shuffle_read_bytes": 9516,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 35,
+          "n_partitions": 1,
+          "median_run_ms": 597,
+          "max_run_ms": 597,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 36,
+          "n_partitions": 183,
+          "median_run_ms": 2554,
+          "max_run_ms": 4995,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 37,
+          "n_partitions": 183,
+          "median_run_ms": 2554,
+          "max_run_ms": 3881,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 38,
+          "n_partitions": 10,
+          "median_run_ms": 105,
+          "max_run_ms": 119,
+          "max_shuffle_read_bytes": 152455,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 39,
+          "n_partitions": 183,
+          "median_run_ms": 11890,
+          "max_run_ms": 17227,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 40,
+          "n_partitions": 189,
+          "median_run_ms": 1,
+          "max_run_ms": 133,
+          "max_shuffle_read_bytes": 787733,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 41,
+          "n_partitions": 183,
+          "median_run_ms": 3770,
+          "max_run_ms": 6679,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 42,
+          "n_partitions": 183,
+          "median_run_ms": 0,
+          "max_run_ms": 59,
+          "max_shuffle_read_bytes": 697409,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 43,
+          "n_partitions": 183,
+          "median_run_ms": 4914,
+          "max_run_ms": 7490,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 44,
+          "n_partitions": 183,
+          "median_run_ms": 17,
+          "max_run_ms": 32,
+          "max_shuffle_read_bytes": 656073,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 45,
+          "n_partitions": 183,
+          "median_run_ms": 6034,
+          "max_run_ms": 9246,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 46,
+          "n_partitions": 183,
+          "median_run_ms": 18,
+          "max_run_ms": 32,
+          "max_shuffle_read_bytes": 973566,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 47,
+          "n_partitions": 183,
+          "median_run_ms": 7433,
+          "max_run_ms": 10937,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 48,
+          "n_partitions": 183,
+          "median_run_ms": 21,
+          "max_run_ms": 36,
+          "max_shuffle_read_bytes": 1193096,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 49,
+          "n_partitions": 183,
+          "median_run_ms": 8242,
+          "max_run_ms": 11889,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 50,
+          "n_partitions": 183,
+          "median_run_ms": 24,
+          "max_run_ms": 39,
+          "max_shuffle_read_bytes": 1974590,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 51,
+          "n_partitions": 183,
+          "median_run_ms": 9626,
+          "max_run_ms": 15015,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 52,
+          "n_partitions": 183,
+          "median_run_ms": 32,
+          "max_run_ms": 51,
+          "max_shuffle_read_bytes": 3027298,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 53,
+          "n_partitions": 183,
+          "median_run_ms": 10556,
+          "max_run_ms": 16629,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 54,
+          "n_partitions": 183,
+          "median_run_ms": 50,
+          "max_run_ms": 67,
+          "max_shuffle_read_bytes": 4194435,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 55,
+          "n_partitions": 183,
+          "median_run_ms": 12557,
+          "max_run_ms": 19786,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 56,
+          "n_partitions": 183,
+          "median_run_ms": 75,
+          "max_run_ms": 104,
+          "max_shuffle_read_bytes": 6735138,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 57,
+          "n_partitions": 183,
+          "median_run_ms": 14869,
+          "max_run_ms": 27449,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 58,
+          "n_partitions": 183,
+          "median_run_ms": 118,
+          "max_run_ms": 185,
+          "max_shuffle_read_bytes": 10109232,
+          "spill_bytes": 0
+        }
+      ]
+    },
+    "evaluation": {
+      "totals": {
+        "numTasks": 206,
+        "executorRunTime": 330457,
+        "executorCpuTime": 319036,
+        "jvmGCTime": 9863,
+        "schedulerDelayTime": 968,
+        "shuffleFetchWaitTime": 2,
+        "bytesRead": 892480477,
+        "shuffleTotalBytesRead": 146443,
+        "shuffleBytesWritten": 146443,
+        "memoryBytesSpilled": 0,
+        "diskBytesSpilled": 0
+      },
+      "executors_used": 20,
+      "hosts_used": 20,
+      "stages": [
+        {
+          "stageId": 73,
+          "n_partitions": 205,
+          "median_run_ms": 1560,
+          "max_run_ms": 3149,
+          "max_shuffle_read_bytes": 0,
+          "spill_bytes": 0
+        },
+        {
+          "stageId": 75,
+          "n_partitions": 1,
+          "median_run_ms": 47,
+          "max_run_ms": 47,
+          "max_shuffle_read_bytes": 146443,
+          "spill_bytes": 0
+        }
+      ]
+    }
+  }
+}
