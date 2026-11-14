@@ -1,0 +1,206 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\title{\textbf{FRACTAL Random Forest on EMR: Analysis of the Scalability Results}}
+\author{Riya Pokhrel \& Lucas Torri}
+\date{November 13, 2026}
+
+\begin{document}
+\maketitle
+
+
+\noindent\textbf{Setup.} Unless stated otherwise, all runs come from the 32-node cluster (13/11):
+random forest with 30 trees and depth 10, executors with 3 cores and 20\,GB, partition multiplier $\times 6$.
+Each point is a single run. The $\times 3$/$\times 6$ pairs from 12/11 behave like repeats and differ by
+at most 2\,\%, which gives an idea of the run-to-run noise.
+
+\section{Strong scaling (fixed data, baseline $n_0 = 8$ executors)}
+
+Total time, with speedup $S = T_8/T_n$ and efficiency $E = S/(n/8)$ in brackets.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rlll}
+\toprule
+Executors & 1\,\% & 5\,\% & 10\,\% \\
+\midrule
+8  & 240\,s & 881\,s & 1796\,s \\
+20 & 131\,s (1.83, 73\,\%) & 421\,s (2.09, 84\,\%) & 725\,s (2.48, 99\,\%) \\
+32 & 110\,s (2.18, 55\,\%) & 297\,s (2.97, 74\,\%) & 513\,s (3.50, 88\,\%) \\
+40 & 105\,s (2.29, 46\,\%) & 274\,s (3.22, 64\,\%) & 468\,s (3.84, 77\,\%) \\
+60 & 95\,s (2.53, 34\,\%)  & 235\,s (3.75, 50\,\%) & 395\,s (4.55, 61\,\%) \\
+\bottomrule
+\end{tabular}
+\caption{Strong scaling on 32 nodes.}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Efficiency grows with problem size (Gustafson).} At 32 executors it goes from
+  55\,\% to 74\,\% to 88\,\%. Training alone reaches a speedup of 5.09 at 10\,\% with 60 executors.
+  \item \textbf{A fixed part of about 70--100\,s does not parallelise (Amdahl):} the file listing
+  (31--52\,s, single-threaded on the driver), the preprocessing at 1\,\% (51\,s $\rightarrow$ 42\,s), and the
+  26 training stages of the MLlib random forest, which are always the same whatever the data size.
+  At 1\,\% with 32 executors or more, tasks last only 120--180\,ms and the utilisation drops to 70--76\,\%.
+  With 60 executors at 1\,\%, the file listing alone is 33\,\% of the runtime.
+  \item At 10\,\%, the 8-executor run used 8\,\% more CPU time than the 20-executor run, which makes
+  $E \approx 100\,\%$ at 20. Memory pressure with only 8 executors is a likely cause, but a single run
+  cannot confirm it.
+\end{itemize}
+
+\section{The knee: one executor per node}
+
+The training CPU time is constant as long as each node hosts one executor, and rises as soon as
+executors share nodes.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Executors & 20 & 32 & 40 & 60 \\
+\midrule
+Hosts used & 20 & 31 & 32 & 32 \\
+CPU at 1\,\%  & 1.00 & 1.11 & 1.21 & 1.44 \\
+CPU at 5\,\%  & 1.00 & 1.05 & 1.17 & 1.41 \\
+CPU at 10\,\% & 1.00 & 1.05 & 1.18 & 1.43 \\
+\bottomrule
+\end{tabular}
+\caption{Training CPU time on 32 nodes, relative to 20 executors.}
+\end{table}
+
+A controlled comparison confirms it: same data (5\,\%), same code, same number of executors and
+partitions, on two cluster sizes.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rcccc}
+\toprule
+Executors & 24 nodes (hosts) & 32 nodes (hosts) & $\Delta$ time & $\Delta$ CPU \\
+\midrule
+20 & 353\,s (20) & 348\,s (20) & $-1$\,\%  & $-1$\,\% \\
+32 & 270\,s (24) & 234\,s (31) & $-13$\,\% & $-12$\,\% \\
+40 & 244\,s (24) & 212\,s (32) & $-13$\,\% & $-12$\,\% \\
+\bottomrule
+\end{tabular}
+\caption{Training time at 5\,\% on 24 and 32 nodes.}
+\end{table}
+
+Each node has 8 vCPUs, which are 4 physical cores with hyper-threading. A second executor on the same
+node runs its tasks on hyper-threads, so each task needs about 40\,\% more CPU time. Going from 32 to
+60 executors gives 1.875$\times$ more cores but only 1.16$\times$ (1\,\%), 1.26$\times$ (5\,\%) and
+1.30$\times$ (10\,\%) faster runs. This limit comes from the hardware, not from the Spark configuration.
+
+\section{Size-up (fixed executors, more data)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rccc}
+\toprule
+Fraction & 40 ex.: total / train & 60 ex.: total / train & Train CPU per 1\,\% (60 ex.) \\
+\midrule
+1\,\%  & 105 / 59\,s   & 95 / 51\,s   & 5.8k CPU$\cdot$s \\
+5\,\%  & 274 / 212\,s  & 235 / 176\,s & 5.0k CPU$\cdot$s \\
+10\,\% & 468 / 386\,s  & 395 / 318\,s & 4.7k CPU$\cdot$s \\
+25\,\% & 1030 / 894\,s & 831 / 708\,s & 4.3k CPU$\cdot$s \\
+\bottomrule
+\end{tabular}
+\caption{Size-up on 32 nodes.}
+\end{table}
+
+The runtime grows less than linearly with the data: 25$\times$ more data takes only 8.7$\times$ more
+time at 60 executors. Once the fixed costs are absorbed, the growth is close to linear: from 10\,\% to
+25\,\% (2.5$\times$ the data) the time grows 2.1--2.3$\times$. The CPU time per row even decreases
+slightly with more data. Our explanation, which we did not measure directly: at each tree level, every
+task builds a split-statistics histogram whose size depends on the level, not on the number of rows.
+Bigger partitions spread that fixed cost over more rows.
+
+\section{Weak scaling (fixed data per executor)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llccc}
+\toprule
+Data per executor & Run & Total & Train & Weak efficiency (total) \\
+\midrule
+0.25\,\%  & 1\,\% on 4 executors$^{*}$ & 379\,s & 311\,s & -- \\
+0.25\,\%  & 5\,\% on 20 executors  & 421\,s & 348\,s & 90\,\% \\
+0.25\,\%  & 10\,\% on 40 executors & 468\,s & 386\,s & 81\,\% \\
+\midrule
+0.125\,\% & 1\,\% on 8 executors   & 240\,s & 185\,s & -- \\
+0.125\,\% & 5\,\% on 40 executors  & 274\,s & 212\,s & 88\,\% \\
+\bottomrule
+\end{tabular}
+\caption{Weak scaling. $^{*}$From the 24-node run with $\times 3$: the placement is identical (one
+executor per node) and $\times 3 = \times 6$, so it is comparable.}
+\end{table}
+
+Two effects explain the loss: more partitions mean more split statistics to merge on the driver at
+every tree level, and at 40 executors, 8 nodes host two executors (Section~2).
+
+\section{Configuration check (course slide 36)}
+
+From 5\,\% of the data upwards, the utilisation is 83--95\,\%, GC takes 2--4\,\% of the task time,
+CPU time / run time is 0.95--0.97, there is no spill, the task skew (max/median) is 1.5--2.5 and the
+scheduler delay is below 1\,\%. The job is CPU-bound and well balanced, and none of the
+misconfiguration symptoms of the slide appear. The partition multiplier is not a lever: $\times 3$ and
+$\times 6$ differ by at most 2\,\%. Only the 1\,\% runs with many executors show low utilisation and
+high skew (4.5--5.6), because there is too little data per core, not because of a configuration error.
+
+\section{Model quality}
+
+\begin{itemize}
+  \item \textbf{Scaling does not change the result.} The mIoU stays between 0.375 and 0.391 and the
+  overall accuracy (OA) between 0.839 and 0.846 in all runs. At a given fraction, the mIoU varies by at
+  most 0.005 across executor counts; the small differences come from the bootstrap sampling of the
+  random forest, which is seeded per partition.
+  \item \textbf{More data does not improve the model.} The mIoU goes from 0.388 at 1\,\% to 0.376 at
+  25\,\%. Part of this is because the test subset grows with the fraction, so the test sets are not the
+  same. Mainly, 30 trees of depth 10 (at most 1024 leaves each) limit the capacity of the model, not the
+  amount of data.
+  \item \textbf{Class imbalance dominates the mIoU.} Ground and vegetation make up 94\,\% of the test
+  points. Bridge and structure get an IoU of 0 and ``other'' at most 0.02, so 3 of the 7 classes pull the
+  mean down.
+  \item \textbf{Height is the most important feature} (0.28--0.30), ahead of NDVI and Red (0.11--0.22)
+  and NumberOfReturns (about 0.1). The height normalisation is the most useful preprocessing step.
+  \item \textbf{Validation vs test} (1\,\%, 60 executors): the OA is close (0.836 vs 0.846) but the mIoU
+  is not (0.263 vs 0.388). Almost all of the gap comes from water (IoU 0.04 vs 0.74) and building
+  (0.31 vs 0.48). With only 1\,\% of the files, the rare classes appear in a few patches, so the mIoU
+  depends heavily on the sample. The OA is the stable metric.
+\end{itemize}
+
+\section{Extrapolation to 50\,\% and 100\,\% (not measured)}
+
+We extrapolated linearly from the 25\,\% run with 60 executors: the training costs about 4.3k CPU$\cdot$s
+per 1\,\% of data and the effective throughput is about 150 CPU$\cdot$s per second. This gives about
+45--50\,min of training and \textbf{about 1\,h in total for 100\,\%}, and about 30\,min for 50\,\%. This
+assumes that the cached training set still fits in executor memory. If it does not, the
+\texttt{MEMORY\_AND\_DISK} storage level falls back to the local disks and the run will be slower, but
+it should not fail.
+
+\section{Conclusions}
+
+\begin{enumerate}
+  \item The pipeline scales well. At 10\,\% it reaches a speedup of 3.5 at 32 executors ($E = 88\,\%$)
+  and 4.55 at 60. The weak-scaling efficiency stays at 81--90\,\%.
+  \item Larger datasets scale better, because a fixed overhead of about 70--100\,s does not parallelise:
+  the file listing on the driver, the short tasks and the 26 training passes of the random forest.
+  \item The main limit is the hardware. Beyond one executor per node, executors share 4 physical cores
+  through hyper-threading and the CPU time per task rises by about 40\,\%. In the controlled comparison,
+  the same number of executors runs 13\,\% faster on 32 nodes than on 24 nodes, where they share nodes.
+  \item The Spark configuration is sound: CPU-bound, 83--95\,\% utilisation, 2--4\,\% GC, no spill and
+  low skew. Changing the number of partitions ($\times 3$ vs $\times 6$) has no measurable effect.
+  \item The best price/performance is one executor per node. Two executors per node still cut the wall
+  time by 16--30\,\% if time matters more than cost.
+  \item Scaling does not change the prediction quality (mIoU about 0.38--0.39, OA about 0.84). The
+  quality is limited by the capacity of the model and by class imbalance, not by the amount of training data.
+\end{enumerate}
+
+\end{document}

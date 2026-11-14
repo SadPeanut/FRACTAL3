@@ -1,0 +1,141 @@
+{
+  "run_name": "e8_f1",
+  "timestamp_utc": "2026-11-09T15:04:24+00:00",
+  "params": {
+    "train_path": "s3a://ubs-datasets/FRACTAL/data/train/",
+    "val_path": "s3a://ubs-datasets/FRACTAL/data/val/",
+    "test_path": "s3a://ubs-datasets/FRACTAL/data/test/",
+    "fraction": 1.0,
+    "eval_fraction": 1.0,
+    "eval_val": false,
+    "seed": 42,
+    "no_height_norm": false,
+    "model": "rf",
+    "num_trees": 100,
+    "max_depth": null,
+    "max_bins": 32,
+    "subsampling_rate": 1.0,
+    "output_dir": "s3://ubs-homes/erasmus/lucas/fractal-results/",
+    "run_name": null,
+    "save_model": false
+  },
+  "cluster": {
+    "master": "yarn",
+    "n_executors": "8",
+    "executor_cores": "3",
+    "executor_memory": "20g",
+    "driver_memory": "6g"
+  },
+  "data": {
+    "train_files": 800,
+    "test_files": 100,
+    "train_points": 73577755,
+    "test_points": 9542246
+  },
+  "timings_sec": {
+    "file_listing": 24.507507768000096,
+    "preprocessing": 42.20308198600014,
+    "training": 62.25551721900001,
+    "evaluation": 5.520555380999895,
+    "total": 109.97954116799997
+  },
+  "class_weights": {
+    "2": 0.5074175381759702,
+    "4": 5.818423561487063,
+    "1": 0.5968174773433527,
+    "0": 4.808097113637636,
+    "3": 2.1063406470869652,
+    "6": 24.36761801360411,
+    "5": 10.699247578694873
+  },
+  "metrics": {
+    "test": {
+      "overall_accuracy": 0.5678621154809884,
+      "mIoU": 0.08112315935442692,
+      "n_classes_in_mIoU": 7,
+      "per_class_iou": {
+        "other": 0.0,
+        "ground": 0.0,
+        "vegetation": 0.5678621154809884,
+        "building": 0.0,
+        "water": 0.0,
+        "bridge": 0.0,
+        "structure": 0.0
+      },
+      "support": {
+        "other": 65629,
+        "ground": 3450847,
+        "vegetation": 5418680,
+        "building": 379611,
+        "water": 206982,
+        "bridge": 17730,
+        "structure": 2767
+      },
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          65629,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          3450847,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          5418680,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          379611,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          206982,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          17730,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2767,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    }
+  }
+}
