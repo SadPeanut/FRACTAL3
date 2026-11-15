@@ -5,7 +5,7 @@ Task metrics with sparkMeasure (seen in the Spark Tuning slides), collected for
 each stage of the pipeline and saved in the results JSON: number of tasks, task
 times, GC, spill, executors and hosts used. analysis/diagnose.py prints them.
 
-The sparkMeasure jar is added by run_experiment.sh (--packages). We call it
+The sparkMeasure jar is added  by run_experiment.sh (--packages). We call it
 through the JVM, so the Python package is not needed. If the jar is missing,
 the pipeline still runs, just without these metrics.
 """

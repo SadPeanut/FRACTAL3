@@ -8,7 +8,7 @@ Three stages are timed separately, as required for the scalability study:
     2. training      : fitting the model on the training features
     3. evaluation    : predictions on the test set + confusion matrix + metrics
 
-One run writes one JSON file (parameters, stage times, metrics) to --output_dir.
+One run writes  one JSON file (parameters, stage times, metrics) to --output_dir.
 plot_speedup.py then turns a folder of such files into the speedup curves.
 
 Normally launched through run_experiment.sh, which sets the executor setup.

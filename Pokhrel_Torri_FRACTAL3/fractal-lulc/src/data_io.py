@@ -4,7 +4,7 @@ data_io.py
 Loading of the FRACTAL Parquet files.
 
 In FRACTAL every Parquet file is one 50 m x 50 m patch, so sampling files is
-the same as sampling patches. A "fraction" of the dataset therefore means a
+the same as sampling patches.  A "fraction" of the dataset therefore means a
 fraction of the files of each split.
 """
 import random

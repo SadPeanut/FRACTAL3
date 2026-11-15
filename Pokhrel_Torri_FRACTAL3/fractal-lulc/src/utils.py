@@ -85,7 +85,7 @@ def registered_executors(spark):
     """Number of executors YARN really gave us (alive right now).
 
     `spark.executor.instances` is only what we asked for, and we can get fewer. PySpark has no
-    function for this, so we go through the JVM. Returns 0 in local mode.
+    function for this, so we go through the JVM. Returns 0 in local  mode.
     """
     infos = spark.sparkContext._jsc.sc().statusTracker().getExecutorInfos()
     return len(infos) - 1  # the list also holds the driver

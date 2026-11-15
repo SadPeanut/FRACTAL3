@@ -23,7 +23,7 @@ def metrics_from_confusion(cm, class_names):
     """Overall accuracy, per-class IoU and mIoU from a confusion matrix.
 
     IoU(c) = TP / (TP + FP + FN). A class that never occurs, neither in the
-    reference nor in the predictions (possible on very small samples), has no
+    reference nor in the  predictions (possible on very small samples), has no
     defined IoU: it is reported as None and left out of the mIoU.
     """
     tp = np.diag(cm).astype(float)

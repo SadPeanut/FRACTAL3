@@ -27,7 +27,7 @@ def add_class_weights(df, n_classes):
 
 
 def fit_model(train_df, args, feature_cols, n_classes):
-    """Fit assembler + classifier as one MLlib Pipeline.
+    """Fit assembler + classifier  as one MLlib Pipeline.
 
     Returns (PipelineModel, class weights dict or None).
     """
