@@ -6,3 +6,5 @@ LateX/*.toc
 LateX/*.synctex.gz
 build/
 failed_runs.txt
+LateX/*.fdb_latexmk
+LateX/*.fls

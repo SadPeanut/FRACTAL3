@@ -1,0 +1,63 @@
+\begin{thebibliography}{10}
+
+\bibitem{aws2024emr}
+{Amazon Web Services}.
+\newblock Amazon {EMR} documentation.
+\newblock \url{https://docs.aws.amazon.com/emr/}, 2024.
+
+\bibitem{amdahl1967validity}
+G.~M. Amdahl.
+\newblock Validity of the single processor approach to achieving large scale
+  computing capabilities.
+\newblock In {\em AFIPS Spring Joint Computer Conference}, pages 483--485,
+  1967.
+
+\bibitem{spark2024docs}
+{Apache Spark}.
+\newblock Apache {Spark} documentation.
+\newblock \url{https://spark.apache.org/docs/latest/}, 2024.
+
+\bibitem{spark2024tuning}
+{Apache Spark}.
+\newblock Performance tuning, in {Spark SQL} guide.
+\newblock
+  \url{https://spark.apache.org/docs/latest/sql-performance-tuning.html}, 2024.
+
+\bibitem{armbrust2015sparksql}
+M.~Armbrust et~al.
+\newblock {Spark SQL}: relational data processing in {Spark}.
+\newblock In {\em ACM SIGMOD}, pages 1383--1394, 2015.
+
+\bibitem{breiman2001random}
+L.~Breiman.
+\newblock Random forests.
+\newblock {\em Machine Learning}, 45(1):5--32, 2001.
+
+\bibitem{canalisparkmeasure}
+L.~Canali.
+\newblock {sparkMeasure}.
+\newblock \url{https://github.com/LucaCanali/sparkMeasure}.
+\newblock CERN.
+
+\bibitem{gaydon2024fractal}
+C.~Gaydon, M.~Daab, and F.~Roche.
+\newblock {FRACTAL}: an ultra-large-scale aerial lidar dataset for {3D}
+  semantic segmentation of diverse landscapes.
+\newblock arXiv:2405.04634, 2024.
+
+\bibitem{meng2016mllib}
+X.~Meng et~al.
+\newblock {MLlib}: machine learning in {Apache Spark}.
+\newblock {\em JMLR}, 17(34):1--7, 2016.
+
+\bibitem{vavilapalli2013yarn}
+V.~K. Vavilapalli et~al.
+\newblock Apache {Hadoop YARN}: yet another resource negotiator.
+\newblock In {\em ACM SoCC}, pages 5:1--5:16, 2013.
+
+\bibitem{zaharia2016spark}
+M.~Zaharia et~al.
+\newblock Apache {Spark}: a unified engine for big data processing.
+\newblock {\em Communications of the ACM}, 59(11):56--65, 2016.
+
+\end{thebibliography}
