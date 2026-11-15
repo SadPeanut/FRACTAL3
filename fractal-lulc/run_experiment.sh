@@ -18,7 +18,7 @@
 # Any other option (--model, --num_trees, --output_dir, --use_class_weights...)
 # is passed unchanged to src/main.py; see `python src/main.py --help`.
 #
-# The Spark settings of the course's "Spark Tuning" slides (p.28-31) are applied
+# The Spark settings of the course's "Spark Tuning" slides are applied
 # to every run (see SPARK_TUNING_ARGS below), so results do not depend on the
 # cluster's defaults.
 #
@@ -37,9 +37,9 @@ set -euo pipefail
 # ---- defaults ----
 FRACTION=1
 N_EXECUTORS=8
-EXECUTOR_CORES=3      # slide p.28: 3 cores -> 2 executors per 8-vCPU node, 2 vCPU left for OS/YARN/HDFS
-EXECUTOR_MEMORY=20g  # slide p.28: (54 GB - 10 % - 6 GB) / 2 = 21 GB max per executor
-MEMORY_OVERHEAD=5g   # slide p.28; covers Python/Arrow buffers on top of the JVM heap
+EXECUTOR_CORES=3     # 2 executors of 3 cores per node (8 vCPU), 2 vCPU left for the system
+EXECUTOR_MEMORY=20g  # 2 x (20g + 5g overhead) fits in the memory of one node
+MEMORY_OVERHEAD=5g   # memory outside the JVM, used by Python
 DRIVER_MEMORY=6g
 DRIVER_OVERHEAD=2g
 DEPLOY_MODE=cluster
@@ -90,7 +90,7 @@ else
     --conf "spark.executor.memoryOverhead=$MEMORY_OVERHEAD"
     --conf "spark.driver.memoryOverhead=$DRIVER_OVERHEAD"
     --conf "spark.dynamicAllocation.enabled=false"
-    --conf "spark.speculation=true"  # re-run straggler tasks elsewhere (slide p.30)
+    --conf "spark.speculation=true"  # re-run slow tasks on another executor
     # Start the job only when every requested executor is registered (the default on YARN is to start
     # at 80 % after 30 s), otherwise the first stage runs on fewer executors than the run claims.
     --conf "spark.scheduler.minRegisteredResourcesRatio=1.0"
@@ -98,7 +98,7 @@ else
   )
 fi
 
-# ---- Spark settings from the "Spark Tuning" slides (p.29-31), applied to every run ----
+# ---- Spark settings from the "Spark Tuning" slides, applied to every run ----
 SPARK_TUNING_ARGS=(
   --conf "spark.driver.maxResultSize=2g"  # cap on the results returned to the driver
   --conf "spark.serializer=org.apache.spark.serializer.KryoSerializer"  # faster than Java serialization
