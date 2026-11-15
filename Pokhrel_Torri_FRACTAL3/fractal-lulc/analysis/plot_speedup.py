@@ -1,19 +1,18 @@
 """
 plot_speedup.py
 ---------------
-Builds the mandatory speedup figures from the results JSON files written by
-main.py. Runs on a normal machine (no Spark needed); copy the results first:
+Makes the speedup figures from the results JSON files written by main.py.
+No Spark needed, copy the results first:
 
     aws s3 sync s3://my-bucket/fractal-results ./results
-
     python analysis/plot_speedup.py --results_dir ./results --out_dir ./figures
 
-Output: one figure per stage (preprocessing, training, evaluation), black and
-white as required, with
+One black and white figure per stage (preprocessing, training, evaluation, plus
+preprocessing without the file listing and the total), with
     x : number of executors
     y : speedup T(n0) / T(n), n0 = smallest executor count run for that fraction
-    one curve per dataset fraction + the ideal linear speedup n / n0.
-Also writes summary.csv (times and quality of every run).
+    one curve per dataset fraction + the ideal speedup n / n0.
+Also makes the total time figure and summary.csv (times and quality of each run).
 """
 import argparse
 import csv
@@ -48,8 +47,8 @@ def load_runs(results_dir):
         if n_exec is None:
             print(f"skipping {path}: no executor count (local run?)")
             continue
-        # x coordinate = executors actually granted by YARN (smallest count seen during the run), not
-        # just requested; older result files without this information fall back to the requested count.
+        # x = executors really given by YARN (smallest value seen during the run);
+        # old result files without it use the requested number
         granted = [v for v in (r["cluster"].get("executors_granted") or {}).values() if v > 0]
         n_used = min(granted) if granted else int(n_exec)
         if n_used != int(n_exec):
@@ -91,9 +90,8 @@ def plot_stage(runs, stage, out_dir):
         n0_values.append(n0)
         all_n.update(ns)
 
-    # Ideal linear speedup n / n0. Curves can start from different n0 (e.g. 8 executors for 1-10 %, but 40 for
-    # 25 %, which was not run on fewer), and each curve is compared with its own ideal line, so one dotted
-    # line is drawn per distinct n0.
+    # Ideal speedup n / n0. The curves do not all start at the same n0 (8 for 1-10 %, 40 for 25 %),
+    # so one dotted line is drawn for each n0.
     max_n = max(all_n)
     for n0 in sorted(set(n0_values)):
         ax.plot([n0, max_n], [1.0, max_n / n0], color="gray", linestyle=(0, (1, 3)), linewidth=1.5,
@@ -152,6 +150,7 @@ def write_summary(runs, out_dir):
 
 
 def main():
+    """Read the results and write all the figures."""
     p = argparse.ArgumentParser(description="Speedup figures from FRACTAL run results")
     p.add_argument("--results_dir", required=True, help="folder with the results JSON files")
     p.add_argument("--out_dir", default="figures", help="where to write the figures")

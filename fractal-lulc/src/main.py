@@ -28,6 +28,7 @@ DATA_ROOT = "s3a://ubs-datasets/FRACTAL/data"
 
 
 def parse_args():
+    """Command line options (run_experiment.sh passes here everything it does not use itself)."""
     p = argparse.ArgumentParser(description="FRACTAL land-cover classification with Spark MLlib")
 
     # --- data ---
@@ -70,11 +71,14 @@ def parse_args():
 
 
 def main():
+    """Run the three timed stages and write the results JSON."""
     args = parse_args()
+    # by default val/test use the same fraction as train
     eval_fraction = args.eval_fraction if args.eval_fraction is not None else args.fraction
 
     spark = build_spark("fractal-lulc")
     settings = cluster_settings(spark)
+    # e.g. e32_f10_r1 = 32 executors, 10 % of the data, repeat 1
     run_name = args.run_name or f"e{settings['n_executors'] or 'local'}_f{args.fraction:g}_r{args.repeat}"
     print(f"=== run {run_name} | cluster settings: {settings} ===", flush=True)
 
@@ -82,11 +86,12 @@ def main():
     metrics = SparkMetrics(spark, enabled=not args.no_spark_metrics)  # task metrics per stage (sparkMeasure)
     data_info = {}  # file and point counts, stored in the results
 
-    # Executors really granted by YARN, sampled at the start and after each stage (requested != granted
-    # on a shared cluster). plot_speedup.py uses the smallest value as the x coordinate of the run.
+    # Executors really given by YARN, checked at the start and after each stage (we can get fewer than
+    # requested). plot_speedup.py uses the smallest value as the x coordinate of the run.
     granted = {}
 
     def snapshot(label):
+        # save and print the number of executors at this point of the run
         granted[label] = registered_executors(spark)
         print(f"executors granted ({label}): {granted[label]} (requested: {settings['n_executors']})", flush=True)
 
@@ -103,8 +108,8 @@ def main():
                 if args.eval_val:
                     val_raw, data_info["val_files"] = load_split(spark, args.val_path, eval_fraction, args.seed)
 
-            # Number of input partitions = number of tasks of the first stage. The Spark Tuning slides
-            # (p.32-33) advise 128-256 MB per partition; recording it helps to explain the scaling results.
+            # Number of input partitions = number of tasks of the first stage. Saved because it helps to
+            # explain the scaling results (the slides advise 128-256 MB per partition).
             data_info["train_input_partitions"] = train_raw.rdd.getNumPartitions()
             data_info["test_input_partitions"] = test_raw.rdd.getNumPartitions()
             if args.eval_val:
@@ -112,6 +117,7 @@ def main():
             partitions = {k: v for k, v in data_info.items() if k.endswith("_input_partitions")}
             print(f"input partitions: {partitions}", flush=True)
 
+            # features + label, cached (materialize ends with a count, so the work is done in this stage)
             height_norm = not args.no_height_norm
             train_df, data_info["train_points"] = materialize(preprocess(train_raw, height_norm))
             test_df, data_info["test_points"] = materialize(preprocess(test_raw, height_norm))
@@ -138,8 +144,7 @@ def main():
                 metrics_by_split["val"] = evaluate(model, val_df, CLASS_NAMES)
 
     snapshot("end")
-    # The three stage timers are the measurement. "total" is their sum, so that the (small) cost of reading
-    # the sparkMeasure metrics after each stage is not counted.
+    # total = sum of the three stages, so the time spent reading the sparkMeasure metrics is not counted
     timer.seconds["total"] = sum(timer.seconds[s] for s in ("preprocessing", "training", "evaluation"))
 
     # ----------------------------------------------------------------------
@@ -159,10 +164,10 @@ def main():
     }
     result_json = json.dumps(result, indent=2)
     write_text(spark, f"{args.output_dir.rstrip('/')}/{run_name}.json", result_json)
-    # Also print it on one line: it can be recovered from the YARN logs if the output folder is unreachable
+    # also printed on one line, so the result can be found in the YARN logs if writing to S3 fails
     print("RESULT_JSON " + json.dumps(result), flush=True)
 
-    if args.save_model:
+    if args.save_model:  # optional, not used for the experiments
         model.write().overwrite().save(f"{args.output_dir.rstrip('/')}/models/{run_name}")
 
     spark.stop()

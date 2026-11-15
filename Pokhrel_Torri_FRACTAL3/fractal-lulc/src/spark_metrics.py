@@ -1,21 +1,20 @@
 """
 spark_metrics.py
 ----------------
-Task-level performance metrics with sparkMeasure (the tool of the Spark Tuning slides, p.32-37), collected
-separately for each pipeline stage and stored in the results JSON. They show, per stage, how many partitions
-(= tasks) there were, how uneven the tasks were, whether anything spilled to disk and how many executors and
-hosts took part, i.e. the information needed to retune the configuration (analysis/diagnose.py prints it).
+Task metrics with sparkMeasure (seen in the Spark Tuning slides), collected for
+each stage of the pipeline and saved in the results JSON: number of tasks, task
+times, GC, spill, executors and hosts used. analysis/diagnose.py prints them.
 
-The sparkMeasure jar must be on the cluster: run_experiment.sh adds it with --packages. The Python package
-`sparkmeasure` is NOT needed: the same JVM calls are made directly, so nothing has to be installed on the
-worker node that runs the driver. If the jar is missing the pipeline still runs and the metrics are left out.
+The sparkMeasure jar is added by run_experiment.sh (--packages). We call it
+through the JVM, so the Python package is not needed. If the jar is missing,
+the pipeline still runs, just without these metrics.
 """
 from contextlib import contextmanager
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-# result key -> possible column names in sparkMeasure's task table (differs a little between versions)
+# name in our results -> possible column names in sparkMeasure (they change a bit between versions)
 SUM_COLUMNS = {
     "executorRunTime": ["executorRunTime"],
     "executorCpuTime": ["executorCpuTime"],
@@ -36,14 +35,14 @@ def _pick(df, names):
 
 
 def summarize_tasks(tasks):
-    """Reduce sparkMeasure's task table (one row per task) to a small dict.
+    """Turn sparkMeasure's task table (one row per task) into a small dict.
 
-    totals : sums over all tasks + number of tasks, of executors and of hosts that ran at least one task
-    stages : per Spark stage, n_partitions (= tasks), median / max task run time (ms), largest shuffle read
-             of one task, spilled bytes. The ratio max / median shows skew (stragglers).
-    Only small aggregates are collected to the driver.
+    totals: sums over all tasks, number of tasks, executors and hosts used.
+    stages: for each Spark stage, number of tasks, median and max task time (ms),
+            biggest shuffle read and spilled bytes. max / median shows the skew.
     """
     cols = {key: _pick(tasks, names) for key, names in SUM_COLUMNS.items()}
+    # totals over the whole pipeline stage
     aggs = [F.count(F.lit(1)).alias("numTasks"),
             F.countDistinct("executorId").alias("executors_used"),
             F.countDistinct("host").alias("hosts_used")]
@@ -51,6 +50,7 @@ def summarize_tasks(tasks):
     row = tasks.agg(*aggs).collect()[0].asDict()
     totals = {k: int(v or 0) for k, v in row.items() if k not in ("executors_used", "hosts_used")}
 
+    # same kind of numbers, but for each Spark stage
     run, shuffle, spill = cols["executorRunTime"], cols["shuffleTotalBytesRead"], cols["diskBytesSpilled"]
     stage_aggs = [F.count(F.lit(1)).alias("n_partitions"),
                   F.expr(f"percentile_approx({run}, 0.5)").alias("median_run_ms"),
@@ -77,16 +77,17 @@ class SparkMetrics:
         try:
             # same call as sparkmeasure.TaskMetrics(spark) in the Python package
             self._tm = spark._jvm.ch.cern.sparkmeasure.TaskMetrics(spark._jsparkSession)
-        except Exception as exc:  # jar not on the classpath: py4j returns a non-callable JavaPackage
+        except Exception as exc:  # the jar is not on the cluster
             print(f"[spark_metrics] sparkMeasure not available, metrics skipped ({type(exc).__name__}). "
                   "Run through run_experiment.sh (it adds --packages) or set SPARK_MEASURE_PACKAGE.", flush=True)
 
     @contextmanager
     def stage(self, name):
+        """Collect the metrics of the tasks run inside the `with` block."""
         if self._tm is None:
             yield
             return
-        self._tm.begin()
+        self._tm.begin()  # begin() also empties the task list, so we only get this stage
         try:
             yield
         finally:
@@ -94,5 +95,5 @@ class SparkMetrics:
             try:
                 tasks = DataFrame(self._tm.createTaskMetricsDF(f"task_metrics_{name}"), self.spark)
                 self.summary[name] = summarize_tasks(tasks)
-            except Exception as exc:  # never let the measurement break a run
+            except Exception as exc:  # a problem with the metrics must not stop the run
                 print(f"[spark_metrics] could not summarise stage {name}: {exc}", flush=True)

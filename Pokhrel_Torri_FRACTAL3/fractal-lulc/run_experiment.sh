@@ -27,8 +27,8 @@
 #   EXTRA_SPARK_ARGS  extra spark-submit arguments. A --conf given here overrides the same
 #                     key set by this script.
 #   SPARK_MEASURE_PACKAGE  Maven coordinates of sparkMeasure, added with --packages so that the
-#                     task metrics are collected (default ch.cern.sparkmeasure:spark-measure_2.12:0.27).
-#                     Set it to "" if the cluster cannot reach Maven; the run then has no spark_metrics.
+#                     task metrics are collected (default ch.cern.sparkmeasure:spark-measure_2.13:0.27,
+#                     use spark-measure_2.12 on Spark 3). Set it to "" to run without the metrics.
 #   EXTRA_PACKAGES    more Maven packages, comma separated, e.g. "org.apache.hadoop:hadoop-aws:3.3.1"
 #                     on a cluster that does not already ship the S3A connector.
 # =============================================================================
@@ -115,9 +115,9 @@ fi
 
 echo "Run: fraction=${FRACTION}% | executors=${N_EXECUTORS} x ${EXECUTOR_CORES} cores x ${EXECUTOR_MEMORY} | master=${MASTER} (${DEPLOY_MODE})"
 
-# EXTRA_SPARK_ARGS is left unquoted on purpose so it splits into separate arguments.
-# The ${arr[@]+...} form avoids an "unbound variable" error on old bash when an array is empty.
-# shellcheck disable=SC2086
+# ---- launch ----
+# EXTRA_SPARK_ARGS is not quoted so that it can hold several arguments.
+# ${arr[@]+...} avoids an error (set -u) when an array is empty.
 spark-submit \
   --master "$MASTER" \
   --deploy-mode "$DEPLOY_MODE" \

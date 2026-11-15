@@ -15,7 +15,7 @@ def confusion_matrix(pred_df, n_classes):
     rows = pred_df.groupBy("label", "prediction").count().collect()
     cm = np.zeros((n_classes, n_classes), dtype=np.int64)
     for r in rows:
-        cm[int(r["label"]), int(r["prediction"])] = r["count"]  # r["count"]: r.count is the tuple method
+        cm[int(r["label"]), int(r["prediction"])] = r["count"]  # not r.count, which is a method of Row
     return cm
 
 

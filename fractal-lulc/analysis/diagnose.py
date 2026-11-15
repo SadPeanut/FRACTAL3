@@ -1,22 +1,19 @@
 """
 diagnose.py
 -----------
-Explains the scaling of a set of runs from the sparkMeasure metrics stored in the results JSON files
-(spark_metrics). For every run and stage it prints
+Reads the sparkMeasure metrics saved in the results JSON files and prints, for
+each run and stage, a few numbers that help to understand the scaling:
 
-  cores   total executor cores of the run
-  parts   largest number of partitions (tasks) of one Spark stage of this pipeline stage
-  t/core  parts / cores: below ~2-3 the cores run out of work (slide "3 more partitions than # of cores")
-  util    executor busy time / (wall time x cores): the share of the cores that were not idle
-  skew    mean of max / median task time over the big stages: > 1.5 = a few slow tasks hold up each stage
-  crit    sum over stages of the slowest task / wall time: close to 1 means the stage time IS the slowest
-          tasks, so adding executors cannot shorten it; only smaller / more partitions can
-  gc      JVM garbage-collection share of the executor time (slide p.36: > 10 % = memory pressure)
-  spill   bytes spilled to disk (slide p.36: > 0 = partitions too big for the memory)
+  cores     executors x cores
+  parts     number of tasks of the biggest Spark stage
+  t/core    parts / cores (below 2-3, some cores have nothing to do)
+  util      busy time of the executors / (wall time x cores)
+  skew      max / median task time (above 1.5, a few slow tasks hold up the stage)
+  crit      slowest tasks / wall time (close to 1: the stage waits for its slowest tasks)
+  gc        share of the time spent in garbage collection (above 10 % = memory pressure)
+  spill_MB  data written to disk because the memory was full
 
     python analysis/diagnose.py --results_dir ./results
-
-Works for cluster runs and for local runs with an explicit master such as local[8] (cores = 8).
 """
 import argparse
 import glob
@@ -36,15 +33,17 @@ def total_cores(cluster):
 
 
 def stage_row(run, stage):
+    """The numbers above for one stage of one run (None if the run has no metrics)."""
     metrics = (run.get("spark_metrics") or {}).get(stage)
     if not metrics or not metrics["stages"]:
         return None
     timings = run["timings_sec"]
+    # the file listing runs on the driver only, so it is removed from the preprocessing time
     wall = timings[stage] - (timings.get("file_listing", 0.0) if stage == "preprocessing" else 0.0)
     cores = total_cores(run["cluster"])
     stages, totals = metrics["stages"], metrics["totals"]
-    # only stages with real work: the 800-task file-listing job of Spark (tasks of a few ms) is not data work
-    real = [s for s in stages if s["median_run_ms"] >= 500] or stages
+    # ignore the very short stages (e.g. the file listing job of Spark, with tasks of a few ms)
+    real =[s for s in stages if s["median_run_ms"] >= 500] or stages
     parts = max(s["n_partitions"] for s in real)
     big = [s for s in real if s["n_partitions"] >= 0.5 * parts]
     skew = sum(s["max_run_ms"] / s["median_run_ms"] for s in big) / len(big) if big else float("nan")
@@ -60,6 +59,7 @@ def stage_row(run, stage):
 
 
 def hints(row):
+    """Short advice when a number looks bad."""
     out = []
     if row["t/core"] < 2:
         out.append("few tasks per core -> more partitions (spark.sql.files.minPartitionNum)")
@@ -75,6 +75,7 @@ def hints(row):
 
 
 def main():
+    """Print one line per run and stage."""
     p = argparse.ArgumentParser(description="Scaling diagnosis from sparkMeasure metrics")
     p.add_argument("--results_dir", required=True)
     args = p.parse_args()
@@ -85,6 +86,7 @@ def main():
         if total_cores(r["cluster"]):  # local[*] runs are skipped: the number of cores is not recorded
             runs.append(r)
     runs.sort(key=lambda r: (float(r["params"]["fraction"]), total_cores(r["cluster"])))
+    # header, then one line per run and stage
     print(f"{'run':<14}{'stage':<14}{'cores':>6}{'parts':>7}{'t/core':>8}{'util':>7}{'skew':>6}{'crit':>6}{'gc':>6}{'spill_MB':>10}  hints")
     for r in runs:
         for stage in STAGES:

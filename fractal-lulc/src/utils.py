@@ -2,10 +2,11 @@
 utils.py
 --------
 Small helpers shared by the pipeline modules:
-  * StageTimer       - wall-clock timing of named stages
-  * build_spark      - creates the SparkSession
-  * cluster_settings - reads the executor setup back from the Spark conf
-  * write_text       - writes a small text file to local disk, HDFS or S3
+  * StageTimer           - wall-clock timing of named stages
+  * build_spark          - creates the SparkSession
+  * cluster_settings     - reads the executor setup back from the Spark conf
+  * registered_executors - number of executors really running
+  * write_text           - writes a small text file to local disk, HDFS or S3
 """
 import time
 from contextlib import contextmanager
@@ -31,7 +32,7 @@ class StageTimer:
         try:
             yield
         finally:
-            # Recorded even if the block raises, so a failed run shows where it stopped
+            # saved even if the block fails, so we can see where a failed run stopped
             self.seconds[name] = time.perf_counter() - start
             print(f"[timer] {name}: {self.seconds[name]:.1f} s", flush=True)
 
@@ -47,9 +48,9 @@ def build_spark(app_name):
     spark = SparkSession.builder.appName(app_name).getOrCreate()
     spark.sparkContext.setLogLevel("WARN")  # keep the logs readable
 
-    # Size the number of shuffle partitions from the cluster size (4 per core).
-    # We read the configured values rather than sc.defaultParallelism because
-    # executors may not have registered yet when the session starts.
+    # Shuffle partitions = 4 per core (the slides advise 2-4 per core).
+    # We use the values given to spark-submit because the executors may not be
+    # registered yet when the session starts.
     conf = spark.sparkContext.getConf()
     n_exec = conf.get("spark.executor.instances", None)
     cores = conf.get("spark.executor.cores", None)
@@ -58,12 +59,10 @@ def build_spark(app_name):
     else:  # e.g. local mode
         total_cores = spark.sparkContext.defaultParallelism
     spark.conf.set("spark.sql.shuffle.partitions", str(total_cores * 4))
-    # Input partitions: by default Spark makes about one per core, i.e. a single wave of tasks. Then one
-    # slow patch decides the stage time and extra executors have nothing to do. Asking for 3 per core
-    # (slide "3 more partitions than # of cores", Spark Tuning p.6) gives the scheduler tasks to rebalance.
-    # It is a lower bound: big inputs still get ~256 MB partitions (maxPartitionBytes).
-    # An explicit --conf spark.sql.files.minPartitionNum=N (EXTRA_SPARK_ARGS) wins, e.g. to keep N fixed in a
-    # strong-scaling run where only the number of executors changes.
+    # Input partitions: at least 6 per core. By default Spark makes about one per core, so one slow task
+    # decides the stage time. With more (smaller) tasks the scheduler can spread the work better.
+    # It is only a lower bound: big inputs are still cut in 256 MB partitions (maxPartitionBytes).
+    # Can be changed with --conf spark.sql.files.minPartitionNum=N in EXTRA_SPARK_ARGS.
     if conf.get("spark.sql.files.minPartitionNum", None) is None:
         spark.conf.set("spark.sql.files.minPartitionNum", str(total_cores * 6))
     return spark
@@ -83,12 +82,10 @@ def cluster_settings(spark):
 
 
 def registered_executors(spark):
-    """Number of executors that YARN actually granted and that are alive right now.
+    """Number of executors YARN really gave us (alive right now).
 
-    With dynamic allocation off, `spark.executor.instances` is only the number requested. On a shared
-    cluster fewer may be granted, which silently changes what a "16 executors" run measures
-    (Spark Tuning p.32). PySpark does not expose getExecutorInfos, so the JVM object is used.
-    Returns 0 in local mode (only the driver is listed).
+    `spark.executor.instances` is only what we asked for, and we can get fewer. PySpark has no
+    function for this, so we go through the JVM. Returns 0 in local mode.
     """
     infos = spark.sparkContext._jsc.sc().statusTracker().getExecutorInfos()
     return len(infos) - 1  # the list also holds the driver
