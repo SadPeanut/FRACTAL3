@@ -70,14 +70,16 @@ def build_spark(app_name):
 
 def cluster_settings(spark):
     """Return the executor setup actually used by this run (None if not set, e.g. local mode)."""
-    conf = spark.sparkContext.getConf()
+    conf = spark.sparkContext.getConf()  # the settings given to spark-submit
+    # name in our results JSON -> Spark setting it comes from (spark-submit option in comment)
     keys = {
-        "master": "spark.master",
-        "n_executors": "spark.executor.instances",
-        "executor_cores": "spark.executor.cores",
-        "executor_memory": "spark.executor.memory",
-        "driver_memory": "spark.driver.memory",
+        "master": "spark.master",                    # --master (yarn on the cluster)
+        "n_executors": "spark.executor.instances",   # --num-executors
+        "executor_cores": "spark.executor.cores",    # --executor-cores
+        "executor_memory": "spark.executor.memory",  # --executor-memory
+        "driver_memory": "spark.driver.memory",      # --driver-memory
     }
+    # conf.get(key, None) gives None if the setting was not given
     return {name: conf.get(key, None) for name, key in keys.items()}
 
 
@@ -87,6 +89,7 @@ def registered_executors(spark):
     `spark.executor.instances` is only what we asked for, and we can get fewer. PySpark has no
     function for this, so we go through the JVM. Returns 0 in local mode.
     """
+    # _jsc.sc() is the Scala SparkContext, its status tracker knows the executors that are alive
     infos = spark.sparkContext._jsc.sc().statusTracker().getExecutorInfos()
     return len(infos) - 1  # the list also holds the driver
 
@@ -97,11 +100,13 @@ def write_text(spark, path, text):
     Works for local paths (file:///...), HDFS and S3 (s3:// or s3a://), so the
     results JSON can be written from the driver wherever it runs.
     """
-    jvm = spark._jvm
-    hadoop_path = jvm.org.apache.hadoop.fs.Path(path)
+    # same Hadoop FileSystem calls as list_parquet_files in data_io.py
+    jvm = spark._jvm  # gives access to the Java classes
+    hadoop_path = jvm.org.apache.hadoop.fs.Path(path)  # the output file as a Hadoop Path object
+    # file system that matches the path prefix (file://, hdfs:// or s3://)
     fs = hadoop_path.getFileSystem(spark._jsc.hadoopConfiguration())
     out = fs.create(hadoop_path, True)  # True = overwrite; parent folders are created
     try:
-        out.write(bytearray(text.encode("utf-8")))
+        out.write(bytearray(text.encode("utf-8")))  # Java expects bytes, not a Python string
     finally:
-        out.close()
+        out.close()  # always close: on S3 the file is only uploaded at this point
