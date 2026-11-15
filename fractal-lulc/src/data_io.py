@@ -25,14 +25,12 @@ RAW_COLUMNS = [
 
 def list_parquet_files(spark, path):
     """List the .parquet files directly under `path` (local, HDFS or S3), sorted by name."""
-    # PySpark has no function to list a folder, so we use the Hadoop FileSystem API (Java) through py4j
-    jvm = spark._jvm  # gives access to the Java classes
-    hadoop_path = jvm.org.apache.hadoop.fs.Path(path)  # the folder as a Hadoop Path object
-    # file system that matches the path prefix (file://, hdfs:// or s3://), created with the
-    # Hadoop settings of the cluster (spark._jsc is the Java SparkContext)
-    fs = hadoop_path.getFileSystem(spark._jsc.hadoopConfiguration())
-    statuses = fs.listStatus(hadoop_path)  # like "ls": one FileStatus per entry of the folder
-    # keep only the paths of the .parquet files
+    # pyspark can't list a folder, so we use the hadoop java classes
+    jvm = spark._jvm
+    hadoop_path = jvm.org.apache.hadoop.fs.Path(path)
+    fs = hadoop_path.getFileSystem(spark._jsc.hadoopConfiguration())  # local, hdfs or s3
+    statuses = fs.listStatus(hadoop_path)  # content of the folder
+    # keep only the parquet files
     files = [str(s.getPath()) for s in statuses if str(s.getPath()).endswith(".parquet")]
     return sorted(files)  # sorting makes the sample independent of the listing order
 
@@ -69,7 +67,6 @@ def load_split(spark, path, fraction, seed):
     inputs = [path] if len(selected) == len(files) else selected
     df = spark.read.parquet(*inputs).select(
         *RAW_COLUMNS,
-        # _metadata is a hidden column added by Spark: here, the path of the file the row comes from
-        F.col("_metadata.file_path").alias("patch"),
+        F.col("_metadata.file_path").alias("patch"),  # file of the point (hidden spark column)
     )
     return df, len(selected)

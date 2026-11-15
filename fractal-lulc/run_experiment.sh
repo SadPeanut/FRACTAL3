@@ -37,9 +37,10 @@ set -euo pipefail
 # ---- defaults ----
 FRACTION=1
 N_EXECUTORS=8
-EXECUTOR_CORES=3     # 2 executors of 3 cores per node (8 vCPU), 2 vCPU left for the system
-EXECUTOR_MEMORY=20g  # 2 x (20g + 5g overhead) fits in the memory of one node
-MEMORY_OVERHEAD=5g   # memory outside the JVM, used by Python
+# 2 executors per node, like in the spark tuning course
+EXECUTOR_CORES=3
+EXECUTOR_MEMORY=20g
+MEMORY_OVERHEAD=5g
 DRIVER_MEMORY=6g
 DRIVER_OVERHEAD=2g
 DEPLOY_MODE=cluster
