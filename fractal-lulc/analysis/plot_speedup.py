@@ -28,9 +28,11 @@ import matplotlib
 matplotlib.use("Agg")  # no display needed
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({"font.size": 9})  # small figures: the report shows four of them per page
+
 STAGES = ["preprocessing", "training", "evaluation"]
 # extra figure: preprocessing without the driver-only file listing (a constant that executors cannot shorten)
-PLOT_STAGES = STAGES + ["preprocessing_excl_listing"]
+PLOT_STAGES = STAGES + ["preprocessing_excl_listing", "total"]  # "total": whole run (the three stages)
 # Without colour, curves are told apart by marker and line style
 MARKERS = ["o", "s", "^", "D", "v", "P"]
 LINESTYLES = ["-", "--", "-.", ":", (0, (5, 1)), (0, (3, 1, 1, 1))]
@@ -75,7 +77,7 @@ def median_times(runs, stage):
 def plot_stage(runs, stage, out_dir):
     """One speedup figure for one stage."""
     times = median_times(runs, stage)
-    fig, ax = plt.subplots(figsize=(5, 4))
+    fig, ax = plt.subplots(figsize=(4.2, 3.4))
 
     n0_values = []
     all_n = set()
@@ -89,21 +91,49 @@ def plot_stage(runs, stage, out_dir):
         n0_values.append(n0)
         all_n.update(ns)
 
-    # Ideal linear speedup n / n0, drawn from the smallest n0 over all fractions
-    n0_ref = min(n0_values)
-    ideal_x = [min(all_n), max(all_n)]
-    ax.plot(ideal_x, [n / n0_ref for n in ideal_x], color="gray", linestyle=(0, (1, 3)),
-            linewidth=1.5, label="ideal (n / n0)")
+    # Ideal linear speedup n / n0. Curves can start from different n0 (e.g. 8 executors for 1-10 %, but 40 for
+    # 25 %, which was not run on fewer), and each curve is compared with its own ideal line, so one dotted
+    # line is drawn per distinct n0.
+    max_n = max(all_n)
+    for n0 in sorted(set(n0_values)):
+        ax.plot([n0, max_n], [1.0, max_n / n0], color="gray", linestyle=(0, (1, 3)), linewidth=1.5,
+                label=f"ideal n / n0 (n0 = {n0})")
 
     ax.set_xlabel("Number of executors")
     ax.set_ylabel("Speedup T(n0) / T(n)")
     ax.set_title(f"Speedup - {stage}")
     ax.set_xticks(sorted(all_n))
     ax.grid(True, linestyle=":", color="lightgray")
-    ax.legend(title="Dataset fraction")
+    ax.legend(title="Dataset fraction", fontsize=7, title_fontsize=8)
     fig.tight_layout()
     for ext in ("pdf", "png"):  # pdf for the LaTeX report
         fig.savefig(os.path.join(out_dir, f"speedup_{stage}.{ext}"), dpi=200)
+    plt.close(fig)
+
+
+def plot_time(runs, stage, out_dir):
+    """Time (seconds) against the number of executors for one stage. Log axis: the fractions differ by 25x."""
+    times = median_times(runs, stage)
+    fig, ax = plt.subplots(figsize=(4.2, 3.4))
+    all_n = set()
+    for i, fraction in enumerate(sorted(times)):
+        by_n = times[fraction]
+        ns = sorted(by_n)
+        ax.plot(ns, [by_n[n] for n in ns], color="black", marker=MARKERS[i % len(MARKERS)],
+                linestyle=LINESTYLES[i % len(LINESTYLES)], label=f"{fraction:g} %")
+        all_n.update(ns)
+    ax.set_yscale("log")
+    ax.set_xlabel("Number of executors")
+    ax.set_ylabel("Time (s)")
+    ax.set_title(f"Execution time - {stage}")
+    ax.set_xticks(sorted(all_n))
+    ax.grid(True, which="both", linestyle=":", color="lightgray")
+    # legend below the axes: the curves fill the whole plot area
+    ax.legend(title="Dataset fraction", fontsize=7, title_fontsize=8, loc="upper center",
+              bbox_to_anchor=(0.5, -0.2), ncol=4)
+    fig.tight_layout()
+    for ext in ("pdf", "png"):
+        fig.savefig(os.path.join(out_dir, f"time_{stage}.{ext}"), dpi=200)
     plt.close(fig)
 
 
@@ -135,6 +165,8 @@ def main():
     for stage in PLOT_STAGES:
         plot_stage(runs, stage, args.out_dir)
         print(f"wrote speedup_{stage}.pdf/png")
+    plot_time(runs, "total", args.out_dir)
+    print("wrote time_total.pdf/png")
     write_summary(runs, args.out_dir)
 
 

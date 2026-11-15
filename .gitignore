@@ -4,5 +4,5 @@ LateX/*.log
 LateX/*.out
 LateX/*.toc
 LateX/*.synctex.gz
-fractal-lulc/build/
-fractal-lulc/failed_runs.txt
+build/
+failed_runs.txt

@@ -1,4 +1,5 @@
-\documentclass[a4paper, 12pt]{article} %or book
+\documentclass[a4paper, 11pt]{article} %or book
+% EDIT: 12pt -> 11pt, to stay under the 15-page limit
 
 \usepackage[english]{babel} %in English
 \usepackage[utf8]{inputenc} %unicode input
@@ -6,129 +7,440 @@
 \usepackage{listings}
 \usepackage{graphicx}
 \usepackage{float}
+% EDIT (added): packages for the new sections (subfigures, diagram, margins)
+\usepackage[a4paper, margin=2.2cm]{geometry}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{positioning, fit, backgrounds}
 
 \usepackage{hyperref}       %hyperlinks
 \hypersetup{colorlinks=true, %colour the links
-	pdftitle="hyperlink example",linkcolor=blue,urlcolor=blue} %title of my PDF
+	pdftitle={Scaling Machine Learning with Spark},linkcolor=blue,urlcolor=blue} %title of my PDF
+% EDIT: pdftitle was "hyperlink example"
 
-
-\title{\textbf{Scaling Machine Learning with Spark}}	
+\title{\textbf{Scaling Machine Learning with Spark}\\[2mm]
+	\large Land-cover classification of the FRACTAL lidar dataset with PySpark and MLlib on AWS EMR}
 \author{\textbf{Riya Pokhrel \& Lucas Torri}\\
 	Université Bretagne Sud \& Paris Lodron Universität Salzburg}
 \date{November 15, 2026}
 
 \begin{document}
-	\maketitle 
-	
-	\tableofcontents
-	
-	
-	
-	
-	
-	\section{Introduction}
-	
-	Airborne LiDAR is producing high resolution 3D point clouds of the territory. In France, the LiDAR HD programme of IGN (Institut National de l’information Geographique et forestière) aims to cover the whole territory by 2026. This means that this huge amount of point clouds have to be classified into land-cover classes. This volume cannot be processed into a single machine.
-	
-	The FRACTAL dataset (Gaydon et al., 2024) is a benchmark built from LiDAR HD data: 100,000 patches
-	of $50 \times 50$~m labelled with seven classes and split into training, validation and test sets.
-	Using deep neural network trained on GPUs, its authors reach 77.5\% mIoU.
-	In this project, we use Apache Spark and MLlib on an AWS EMR cluster instead. Our objectives are to:
-	\begin{itemize}
-		\item build a PySpark pipeline that samples a fraction of the patches, computes features and
-		trains a random forest;
-		\item evaluate it with the per-class IoU, the mIoU and the overall accuracy;
-		\item time the preprocessing, training and evaluation stages separately and draw speedup curves
-		for several dataset fractions and numbers of executors;
-		\item keep the experiments reproducible on larger fractions and clusters.
-	\end{itemize}
-	
-	
-	
-	
-	
-	
-	\section{Dataset}
-	\label{sec:dataset}
-	
-	FRACTAL (Gaydon et al., 2024) was built by IGN from LiDAR HD data acquired in five regions of
-	southern France. It contains 100,000 patches of $50 \times 50$~m, for a total of about 9.3 billion
-	points (37 points per m$^2$ on average). Each point has its coordinates, the intensity of the returned
-	signal, its return number and the number of returns of its laser pulse, and a colour (red, green, blue
-	and near-infrared) taken from aerial images. The patches are split geographically into a training set
-	(80,000 patches), a validation set (10,000) and a test set (10,000).
-	
-	For this project, the original LAZ files were converted to Parquet by the teacher and stored
-	on Amazon S3, with one file per patch and one folder per split. The training set alone weighs about
-	263~GB and the test set about 35~GB. Each row of a file is a point, with 21 columns; besides the
-	attributes listed above, the other columns describe the acquisition (scan angle, GPS time, flight line)
-	and are not used in this work.
-	
-	Every point is assigned to a class code.
-	In the paper, these codes are grouped into seven classes (Table~\ref{tab:classes}). In our pipeline, the rare codes 65 and 66 (artefacts and virtual points) are assigned to \textit{other} and code 67 (miscellaneous buildings) to \textit{building}.
-	
-	\begin{table}[H]
-		\centering
-		\begin{tabular}{llrrr}
-			\hline
-			Class & LiDAR HD codes & Train (\%) & Val (\%) & Test (\%) \\
-			\hline
-			Other               & 1       & 0.56  & 0.53  & 0.66  \\
-			Ground              & 2       & 39.0  & 39.1  & 40.5  \\
-			Vegetation          & 3, 4, 5 & 57.0  & 56.9  & 54.1  \\
-			Building            & 6       & 2.80  & 2.80  & 3.33  \\
-			Water               & 9       & 0.52  & 0.49  & 1.20  \\
-			Bridge              & 17      & 0.13  & 0.10  & 0.16  \\
-			Permanent structure & 64      & 0.04  & 0.04  & 0.03  \\
-			\hline
-		\end{tabular}
-		\caption{Classes and share of points per split (Gaydon et al., 2024).}
-		\label{tab:classes}
-	\end{table}
-	
-	The dataset is strongly imbalanced. Ground and vegetation represents about 96\% of the points, while
-	bridges and permanent structures represent less than 0.2\%. 
-	This matters for the evaluation, since a model that ignores the rare classes can still reach a high overall accuracy.
-	It's why mIoU, that gives the same weight to every class is the main metric of the project
+\begin{titlepage}
+\centering
+\vspace*{1.5cm}
+{\Large University of Southern Brittany (UBS), Vannes, France}\\[3mm]
+Copernicus Master in Digital Earth\\
+Foundation of Data Science / Big Data -- Project 1\\[2.5cm]
+{\LARGE \textbf{Scaling Machine Learning with Spark}}\\[4mm]
+{\large Land-cover classification of the FRACTAL lidar dataset\\ with PySpark and MLlib on AWS EMR}\\[2.5cm]
+\textbf{Riya Pokhrel \& Lucas Torri}\\[2mm]
+Submitted to Prof.\ Frédéric Raimbault (IRISA, OBELIX team)\\[2mm]
+November 15, 2026\\[2cm]
+\begin{minipage}{0.88\textwidth}
+\small
+\textbf{Abstract.}\;
+We exploit the FRACTAL airborne LiDAR dataset and train a random forest classifier using Spark MLlib on an AWS EMR cluster to classify LiDAR point clouds into seven land-cover classes. We develop an end-to-end machine learning pipeline for the point-cloud classification task and assess how each stage of the pipeline scales with the number of executors across different fractions of the dataset. The report explains the experiments, the results achieved, and the design choices made. The final configuration reaches 84\% overall accuracy and 0.38 mIoU. Our experiments show that training runs 3.6 to 5.1 times faster with 60 executors than with 8, with scalability efficiency increasing with the size of the dataset.
+\end{minipage}
+\end{titlepage}
+
+\section{Introduction}
+
+Airborne LiDAR produces high-resolution 3D point clouds of the territory. In France, the LiDAR HD programme of IGN (Institut National de l'information Géographique et forestière) aims to cover the whole country by 2026, and these point clouds have to be classified into land-cover classes. The volume is too large for a single machine.
+
+The FRACTAL dataset (Gaydon et al., 2024) is a benchmark built from LiDAR HD data: 100,000 patches of $50 \times 50$~m labelled with seven classes and split into training, validation and test sets. Deep neural networks trained on GPUs reach 77.5\% mIoU on it. In this project we use Apache Spark and MLlib on an AWS EMR cluster. This is a scaling task: our interest is in how a distributed pipeline behaves when we add executors and data, and in understanding why. Our objectives are to:
+\begin{itemize}
+\item build a PySpark pipeline that samples a fraction of the patches, computes features and trains a random forest;
+\item evaluate it with the per-class IoU, the mIoU and the overall accuracy;
+\item time preprocessing, training and evaluation separately and draw speedup curves for several fractions and numbers of executors;
+\item explain the shape of these curves with measurements, and justify each choice of configuration;
+\item keep the experiments reproducible on larger fractions (50 and 100\%) and clusters.
+\end{itemize}
+Section~\ref{sec:pipeline} describes the pipeline, Section~\ref{sec:setup} the experimental set-up, Section~\ref{sec:rounds} the pilot and the four rounds of experiments and what each taught us, Section~\ref{sec:config} the final configuration with the justification of every choice, and Sections~\ref{sec:results} and~\ref{sec:why} the final results and their interpretation.
+
+\section{Data and Tools}
+
+\subsection{Dataset}
+FRACTAL was built by IGN from LiDAR HD data acquired in five regions of southern France: 100,000 patches of $50 \times 50$~m, about 9.3 billion points (37 points per m$^2$). Each point has its coordinates, the intensity of the returned signal, its return number, the number of returns of its pulse, and a colour (red, green, blue, near-infrared) taken from aerial images. The patches are split geographically into 80,000 training, 10,000 validation and 10,000 test patches. The original LAZ files were converted to Parquet by the teacher and stored on Amazon S3, with one file per patch and one folder per split; each row is a point with 21 columns, of which we use nine.
+
+The codes of LiDAR HD are grouped into seven classes (Table~\ref{tab:classes}). In our pipeline, every code that is not one of the listed ones is assigned to \textit{other}. The dataset is strongly imbalanced: ground and vegetation are about 96\% of the points, bridges and permanent structures less than 0.2\%. A model can therefore have a high overall accuracy and ignore the rare classes, which is why the mIoU, which gives each class the same weight, is the main metric.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llrrr}
+\hline
+Class & LiDAR HD codes & Train (\%) & Val (\%) & Test (\%) \\
+\hline
+Other               & 1       & 0.56  & 0.53  & 0.66  \\
+Ground              & 2       & 39.0  & 39.1  & 40.5  \\
+Vegetation          & 3, 4, 5 & 57.0  & 56.9  & 54.1  \\
+Building            & 6       & 2.80  & 2.80  & 3.33  \\
+Water               & 9       & 0.52  & 0.49  & 1.20  \\
+Bridge              & 17      & 0.13  & 0.10  & 0.16  \\
+Permanent structure & 64      & 0.04  & 0.04  & 0.03  \\
+\hline
+\end{tabular}
+\caption{Classes and share of points per split (Gaydon et al., 2024).}
+\label{tab:classes}
+\end{table}
+
+\subsection{Tools}
+\paragraph{Apache Spark and PySpark.}
+Apache Spark is a multi-language distributed computing engine designed for data engineering, data science, and machine learning. It can run on a single machine or across a cluster of machines and is widely used for its simplicity, speed, and scalability (Zaharia et al., 2016; Apache Spark, 2024a). In Spark, a dataset is divided into partitions, which are processed in parallel through tasks scheduled across executors. Executors are processes running on worker nodes that execute tasks and store intermediate data in memory or on disk. The driver coordinates the application and manages task execution across the cluster. Spark uses lazy evaluation, meaning transformations are not executed immediately but are built into an execution plan. Computation starts when an action, such as \texttt{count()} or \texttt{collect()}, is called.
+
+PySpark is the Python API for Apache Spark. It allows users to use Spark's distributed computing capabilities through Python, and it uses Py4J to communicate between Python and the JVM, where the Spark engine runs. The SparkSession provides the main entry point for working with Spark, while the underlying SparkContext manages the connection to the cluster. We use the DataFrame API (Armbrust et al., 2015).
+
+\paragraph{AWS EMR and S3.}
+Amazon EMR is a managed cluster platform that simplifies running big data frameworks, such as Apache Hadoop and Apache Spark, on AWS (Amazon Web Services, 2024). It provisions and manages clusters, while YARN (Yet Another Resource Negotiator; Vavilapalli et al., 2013) manages cluster resources and allocates them to applications, such as Spark jobs. Users can configure cluster capacity based on their processing needs.
+Amazon S3, on the other hand, provides scalable object storage. In our project, the FRACTAL dataset was stored in S3 as multiple Parquet files and processed using Spark on an EMR cluster, with YARN managing resource allocation.
+
+\paragraph{Spark MLlib.}
+MLlib is Apache Spark's scalable machine learning library, providing distributed algorithms for tasks such as classification, regression, and clustering (Meng et al., 2016). It integrates with Spark DataFrames and supports building end-to-end machine learning pipelines. In our project, we used MLlib to train a random forest classifier (Breiman, 2001) on LiDAR point clouds.
+
+\paragraph{sparkMeasure.}
+sparkMeasure is a tool and library for measuring and analyzing Apache Spark job performance (Canali, CERN). It collects execution metrics, such as task duration, executor time, and memory usage, helping identify performance bottlenecks. In our project, we used it to monitor the performance and scalability of different pipeline stages across cluster configurations.
+
+\section{Methodology}
+\label{sec:pipeline}
+
+The methodology adopted for this study is described below (Figure~\ref{fig:pipeline}).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[box/.style={draw, rounded corners=2pt, align=center, font=\footnotesize, minimum width=4.3cm, minimum height=8mm, inner sep=3pt},
+>=stealth, node distance=4mm]
+\node[box] (p1) {list and sample files\\(driver, fixed seed)};
+\node[box, below=of p1] (p2) {read 9 columns, compute\\features and label};
+\node[box, below=of p2] (p3) {cache in memory/disk,\\\texttt{count} to force the work};
+\node[box, right=1.2cm of p1] (t1) {assemble the 10 features\\into one vector};
+\node[box, below=of t1] (t2) {random forest\\(30 trees, depth 10)};
+\node[box, right=1.2cm of t1] (e1) {predict on the\\cached test sample};
+\node[box, below=of e1] (e2) {7$\times$7 confusion matrix\\(distributed count)};
+\node[box, below=of e2] (e3) {OA, IoU per class, mIoU\\(on the driver)};
+\begin{scope}[on background layer]
+\node[draw, dashed, fit=(p1)(p2)(p3), inner sep=5pt, label={[font=\footnotesize\bfseries]above:Preprocessing}] {};
+\node[draw, dashed, fit=(t1)(t2), inner sep=5pt, label={[font=\footnotesize\bfseries]above:Training}] {};
+\node[draw, dashed, fit=(e1)(e2)(e3), inner sep=5pt, label={[font=\footnotesize\bfseries]above:Evaluation}] {};
+\end{scope}
+\draw[->] (p1) -- (p2); \draw[->] (p2) -- (p3);
+\draw[->] (t1) -- (t2);
+\draw[->] (e1) -- (e2); \draw[->] (e2) -- (e3);
+\end{tikzpicture}
+\caption{The methodological pipeline. Each of the three stages is timed separately.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Sampling}
+As each Parquet file represents one patch, a fraction of the dataset corresponds to a fraction of the files in each split. Therefore, we sample files rather than points, allowing Spark to read only the selected files instead of scanning files that will not be used for a given fraction. For each split, the sorted list of files is shuffled once using a fixed seed, and the first \(k\) fraction of files is selected. The samples are nested to ensure that runs with different fractions are comparable. We apply the same fraction to both the training and test sets.
+
+\subsection{Feature Extraction}
+We describe each point using ten features: height above the lowest point of its patch, intensity, return number, number of returns, four colour channels, NDVI \((NIR-R)/(NIR+R)\), and brightness. Computing the height requires information from other points in the same patch. We therefore calculate the minimum elevation of each patch through an aggregation of at most 80,000 rows and broadcast the result to the executors. This allows us to join it with the large point table without a shuffle. We use height relative to the patch minimum rather than raw elevation, which varies across regions. We also exclude X and Y coordinates because the geographic split could allow the model to memorise locations rather than learn generalisable patterns.
+
+All features are computed using built-in Spark expressions, which are more efficient than Python functions when processing billions of points. The resulting DataFrame is cached, and a count action forces its computation within the preprocessing timer. Otherwise, due to lazy evaluation, preprocessing costs would be attributed to the first stage that uses the data.
+
+\subsection{Model}
+We used MLlib's \texttt{RandomForestClassifier} with a fixed seed and 32 bins per feature. We experimented with the number and depth of the trees, which are discussed in Section~\ref{sec:rounds}.
+
+\subsection{Evaluation Metrics}
+MLlib provides only the overall accuracy (OA) but not the IoU. We therefore count the test points for each pair (true class, predicted class), so that only the \(7 \times 7\) confusion matrix reaches the driver. The IoU of a class is \(TP/(TP + FP + FN)\), the mIoU is the mean of the seven IoU values, over all test points of the sample.
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{Computing Environment}
+All the experiments were run on an AWS EMR cluster managed by YARN, with the data stored on S3. We used the cluster at different capacities, ranging from 10 nodes to 32 nodes. The application runs in YARN cluster mode, so the driver runs inside the cluster.
+
+\subsection{Measurements and Speedup Definition}
+For each run, a JSON file records the execution time of the three pipeline stages, including the file-listing step within preprocessing. It also stores the number of files, partitions and points processed, the model evaluation metrics, and the task-level performance metrics collected during execution.
+
+The x-axis of the speedup curves represents the number of executors actually granted by YARN, as recorded during each run, rather than the number requested. The speedup for \(n\) executors is calculated as \(T(n_0)/T(n)\), where \(T(n)\) is the execution time with \(n\) executors and \(n_0\) is the smallest number of executors tested for that particular data fraction. This baseline is 8 executors for the 1\%, 5\% and 10\% fractions, and 40 executors for the 25\% fraction. The ideal speedup is calculated as \(n/n_0\), representing the expected speedup under perfect linear scaling. Parallel efficiency is then calculated as the observed speedup divided by the ideal speedup. Each configuration was run only once due to time constraints.
+
+\subsection{Experiment Design}
+We ran a number of experiments and, for simplicity, organise them into a pilot run (Experiment 0) and four rounds, A, B, C and D, in this report (Table~\ref{tab:history}). After each round we analysed the results and modified a few settings for the next one. The experiments and results of each round are described in Section~\ref{sec:rounds}.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}p{0.55cm}p{2.9cm}p{3.7cm}p{3.5cm}p{3.5cm}@{}}
+\hline
+& Data, executors & What we changed & Objective & Outcome \\
+\hline
+0 & 1\%; 1--32 executors (7 runs) & First run of the pipeline: 100 trees of default depth, class weights & Does the pipeline run and scale on EMR? & Runs and scales, but every test point is predicted as vegetation (mIoU 0.081) \\
+\hline
+A & 1\%; 2--20 executors (6 runs), 10 nodes & Pipeline corrected % CHECK: state what was fixed
+& Does the pipeline work and where does the time go? & Training is 75--88\% of the run; the forest is the cost \\
+\hline
+B & 1\% and 5\%; 4--48 executors (14 runs), 24 nodes & 30 trees, depth 10, no weights; 3 input partitions per core; Spark settings from the course slides & Can we shorten training and give the scheduler enough tasks? & mIoU 0.388; cores 64--83\% busy at 5\% \\
+\hline
+C & 5\%; 8--48 executors (6 runs), 24 nodes & 6 partitions per core & Do more, smaller tasks use the cores better? & Utilisation $+$3 to 6 points; run time within 3\% \\
+\hline
+D & 1, 5, 10, 25\%; 8--60 executors (17 runs) $+$ 1 validation run, 32 nodes & Setting of C kept & Final speedup curves & Sections~\ref{sec:results}, \ref{sec:why} \\
+\hline
+\end{tabular}
+\caption{The pilot run and the four rounds of experiments. The number of nodes of the cluster is given when known.}
+\label{tab:history}
+\end{table}
+\section{Experiments}
+\label{sec:rounds}
+
+\subsection{Experiment 0: Pilot Run}
+\textbf{Objective.} We verified that the entire pipeline runs on EMR and investigated how its different stages scale, starting from a single executor.
+
+\textbf{Configuration.} We used 100 trees with MLlib's default maximum depth, class weights, 3 cores and 20 GB of memory per executor. The experiment used 1\% of the dataset (800 training and 100 test files), with 1, 2, 4, 8, 16, 24 and 32 executors.
+
+\textbf{Observations.} The pipeline ran successfully from end to end across all seven configurations. However, model quality was identical across all seven runs and was degenerate: the model predicted vegetation for all 9.5 million test points. This resulted in an overall accuracy of 0.568, corresponding to the proportion of vegetation points in the test set, and an mIoU of 0.081. We consequently do not consider these timings representative of model training scalability.
+
+\textbf{Conclusion and decision.} We concluded that a timing study is only meaningful if the model learns to distinguish between classes. We therefore corrected the pipeline before the next round of experiments. % CHECK: state what was fixed
+
+\subsection{Experiment A: Baseline Configuration}
+\textbf{Objective.} We investigated whether the entire pipeline runs successfully and which stage contributes most to the overall execution time.
+
+\textbf{Configuration.} We started with a random forest of 100 trees at MLlib's default maximum depth of 5. To address class imbalance from the beginning, we used class weights proportional to the square root of the inverse class frequency. Using the plain inverse would have assigned weights in the thousands to the rarest classes.
+
+\textbf{Observations.} Training took 777 s with 2 executors and 140 s with 20 executors, giving a speedup of 5.5$\times$ for a 10-fold increase in the number of executors. In comparison, preprocessing took 79 s and 43 s, respectively. Training accounted for 75--88\% of the total execution time, with its share increasing as the number of executors decreased. File listing remained relatively constant at 25--31 s, regardless of the number of executors. Model quality was also consistent across executor counts, with overall accuracy (OA) of 0.813--0.814 and mIoU of 0.368--0.370.
+
+\textbf{Conclusion and decision.} Training the random forest was clearly the most time-consuming stage. Comparing the configurations, 100 trees of depth 5 took 225 s to train on 8 executors, whereas the 30 trees of depth 10 used in Round B took 185 s at the same data fraction and achieved better classification quality. Since the computational cost of a random forest increases with the number of trees, reducing the number of trees offered a better trade-off than limiting tree depth. To keep the scaling experiments measurable and repeatable within our available cluster time, we therefore reduced the forest to 30 trees of depth 10. The relatively constant file-listing time was also the first indication of a pipeline component that could not be accelerated by adding more executors.
+
+\subsection{Experiment B: Spark Settings and Model Size}
+\textbf{Objective.} We investigated whether the cluster could be used more efficiently with a less computationally expensive model and what sparkMeasure could reveal about executor idle time.
+
+\textbf{Configuration.} We reduced the forest to 30 trees of depth 10 and removed class weights. In Round A, bridge and structure had an IoU of 0 with class weights, while ground classification was also worse (0.60 compared with 0.66). We also applied the fixed Spark settings taken from the Spark tuning slides (Section~\ref{sec:config}), including a minimum of three input partitions per core and waiting for all executors before starting the computation. Since these three changes were introduced together, we cannot attribute the improved scores (mIoU 0.388 and OA 84.5\% at 1\%) to any one of them. The runs used 1\% and 5\% of the data with 4 to 48 executors on 24 nodes.
+
+\textbf{Observations.} sparkMeasure showed that, from around 20 executors at the 5\% data fraction, executor cores were busy for 64--83\% of the time, increasing to 77--83\% during training. We also observed that the slowest task in a stage took 2--4 times longer than the median task. Since a stage can only finish once its slowest task completes, the remaining cores may sit idle while waiting for these longer-running tasks. No stage spilled data to disk, and garbage collection accounted for at most 7\% of task time, indicating that memory settings were not a bottleneck.
+
+\textbf{Conclusion.} The memory configuration appears adequate, and memory pressure is not the main source of inefficiency. The remaining inefficiency is more likely related to how work is distributed across cores, particularly the variation in task execution times. This motivated the next round of experiments.
+
+\subsection{Experiment C: Input Partitions per Core}
+\textbf{Objective.} We investigated whether increasing the number of smaller tasks would help the scheduler distribute the workload more evenly across executors and reduce idle time. The runs used 5\% of the data with 8 to 48 executors on 24 nodes.
+
+\textbf{Rationale.} Spark determines the input partition size as the smaller of the maximum partition size (256 MB) and the total input size divided by the minimum number of partitions (Apache Spark, 2024b). Increasing the minimum number of partitions from 3 to 6 per core therefore halves the task size for the same amount of data. Smaller tasks give the scheduler more opportunities to distribute the workload and reduce the impact of slow-running tasks on stage completion.
+
+\textbf{Observations (Table~\ref{tab:partitions}).} Training core utilisation increased by 3--6 percentage points from 20 executors onward. However, the total execution time changed by less than 3\%. Doubling the number of partitions increased total core time by approximately 5\%, offsetting the gains from better utilisation.
+
+\textbf{Conclusion and decision.} Increasing the partition count helps keep executor cores busier, but it is not the main factor affecting execution time. We therefore retained 6 partitions per core. This setting has little impact at 5\% of the data and, for larger fractions, acts only as a lower bound on the partition count. With 50\% and 100\% of the data, the 256 MB maximum partition size alone produces more partitions than the 6-per-core minimum on clusters with fewer than approximately 60 and 125 executors, respectively.
+
+This is also the part of the study whose effect we measured least precisely. At 25\% of the data, where the 6-per-core setting still increases the number of partitions with the number of executors (728 on 40 executors and 1,097 on 60), we did not test the alternative of 3 partitions per core. The experiment was also run only once, so we cannot be as conclusive as with repeated runs of the same settings, because of time constraints.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}rrrrrr@{}}
+\hline
+Executors & Partitions & Utilisation, \% & Preprocessing, s & Training, s & Total, s \\
+\hline
+\input{tables/tab_partitions.tex}
+\end{tabular}
+\caption{Round C, 5\%, 24 nodes: 3 against 6 input partitions per core. Utilisation is for training. Each cell gives the value for 3 / 6 partitions per core.}
+\label{tab:partitions}
+\end{table}
+
+\subsection{Experiment D: Final Experimental Matrix}
+\textbf{Objective.} We investigated how each stage of the pipeline scales across four data fractions and different cluster sizes, ranging from 8 to 60 executors, using the configuration established in Round C.
+
+\textbf{Design.} We ran the 1\%, 5\% and 10\% data fractions on 8, 20, 32, 40 and 60 executors. Due to the higher computational cost, the 25\% fraction was tested only on 40 and 60 executors. These runs, on 32 nodes, are the basis of Sections~\ref{sec:results} and~\ref{sec:why}. They also allow a comparison between the two cluster sizes: at 5\%, the same 32 executors with the same 604 partitions took 270 s to train on the 24-node cluster and 234 s on 32 nodes (244 and 212 s with 40 executors; Table~\ref{tab:nodes}). With 24 nodes and 32 executors, the executors cannot all be on distinct hosts (24 hosts used), while with 32 nodes they are (31 hosts used). Executors on the same node share its CPU, memory bandwidth and network, and this is our explanation for the difference; the two clusters were measured on different days and each configuration was run once, so this is a strong indication rather than a proof.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrrr@{}}
+\hline
+Cluster & Executors & Hosts used & Partitions & Training time, s & Core time, $10^3$\,s \\
+\hline
+\input{tables/tab_nodes.tex}
+\end{tabular}
+\caption{5\%: the same number of executors on 24 and on 32 nodes.}
+\label{tab:nodes}
+\end{table}
+
+\section{Final Configuration}
+\label{sec:config}
+
+Table~\ref{tab:settings} lists the Spark settings kept fixed across all runs from Round B onward. These settings are based on the sizing guidelines presented in the Spark tuning slides of the course and the Spark documentation. We did not perform a separate study to evaluate the effect of each setting individually. Instead, we verified that the configuration was sufficient by checking that there was no disk spilling, garbage collection remained low (Round B), and the number of executors requested matched the number actually allocated. All settings are specified in the launch script, ensuring that the results do not depend on cluster defaults.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}p{3.6cm}p{2.4cm}p{5.1cm}p{3.3cm}@{}}
+\hline
+Choice & Value & Justification & Evidence \\
+\hline
+Forest & 30 trees, depth 10, 32 bins & Cost grows with the number of trees; depth 10 scores better than 100 trees of depth 5 & Round A against B \\
+Class weights & none & No effect on rare classes, lower ground IoU & Round A \\
+Executor & 3 cores, 20\,GB heap, 5\,GB overhead & Two per 8-vCPU node, with resources left for system and YARN & No spill, GC $\le$ 7\% \\
+Dynamic allocation & off & EMR would change the number of executors during a run, and the speedups would mean nothing & Design \\
+Wait for all executors & 100\%, up to 120\,s & By default YARN starts the job at 80\% after 30\,s; three runs asked for 48 executors and had 47 & Challenge, below \\
+Min.\ input partitions & 6 $\times$ cores & Tasks for the scheduler to redistribute; harmless at large sizes & Round C \\
+Max.\ input partition & 256\,MB & Suggested upper end of the range in the slides & --- \\
+Shuffle partitions & 4 $\times$ cores & We followed the slide recommendation of 2--4 partitions per core & --- \\
+Adaptive execution & on, 128\,MB & Merges small shuffle partitions at run time & --- \\
+Speculation, Kryo & on & Re-launch very slow tasks; compact serialisation & --- \\
+Driver & 6\,GB $+$ 2\,GB & It only collects the confusion matrix and small summaries & Design \\
+\hline
+\end{tabular}
+\caption{Final configuration and the reason for each choice.}
+\label{tab:settings}
+\end{table}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Classification Quality}
+Table~\ref{tab:quality} presents the model performance on the test set for each data fraction, using the configuration with the largest number of executors. Across different executor counts, the mIoU changes by at most 0.005, as a random forest can be slightly sensitive to data partitioning.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrrrrrrr@{}}
+\hline
+Setting & OA (\%) & mIoU & other & ground & veg. & build. & water & bridge & struct. \\
+\hline
+\input{tables/tab_quality.tex}
+\end{tabular}
+\caption{Test-set quality (IoU per class). The last row evaluates the validation split with the same model.}
+\label{tab:quality}
+\end{table}
+
+Since the main objective of this study is to investigate scalability, the model is deliberately kept simple and operates on individual points rather than considering their spatial neighbourhood. Vegetation, ground and water are reasonably well classified, with IoU values of 0.79--0.81, 0.67--0.69 and 0.74--0.82, respectively. Building classification is less accurate, with IoU ranging from 0.34 to 0.48. Other, bridge and structure are barely predicted by the model, with IoU values between 0.00 and 0.02. Together, these classes account for only 0.9\% of the test points.
+
+Three observations summarise these results.
+
+(i) Each point is classified using only ten features, without any information about its neighbouring points. This limits the model's ability to distinguish classes such as bridges from the ground beneath them. The most important features are normalised height (0.30 at 25\%), NDVI (0.18) and the red channel (0.17), which is consistent with this limitation.
+
+(ii) Model performance does not depend significantly on the amount of training data (mIoU of 0.388 at 1\% and 0.376 at 25\%) or the number of executors. This is important for our scaling study, as the classification quality remains stable across configurations, allowing us to compare execution times while keeping the underlying computation consistent.
+
+(iii) On the validation split, the same model achieves an mIoU of 0.263, largely due to the poor IoU for water (0.04). The 1\% validation sample contains only 5,382 water points (0.06\%), compared with 206,982 points (2.2\%) in the test sample. Consequently, even a small number of classification errors has a large impact on the IoU for this class.
+
+\subsection{Scalability}
+Table~\ref{tab:times} gives the times of the final matrix, Figure~\ref{fig:speedup} the speedup curves and Table~\ref{tab:speedup} the speedups between the smallest and the largest number of executors.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}llrrrrr@{}}
+\hline
+& & \multicolumn{5}{c}{Number of executors} \\
+\input{tables/tab_times.tex}
+\end{tabular}
+\caption{Time (s) of each stage. File listing is part of preprocessing. Only 40 and 60 executors were run for 25\%.}
+\label{tab:times}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}\includegraphics[width=\textwidth]{figures/speedup_preprocessing.pdf}\caption{Preprocessing}\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}\includegraphics[width=\textwidth]{figures/speedup_preprocessing_excl_listing.pdf}\caption{Preprocessing without file listing}\end{subfigure}\\[2mm]
+\begin{subfigure}{0.48\textwidth}\includegraphics[width=\textwidth]{figures/speedup_training.pdf}\caption{Training}\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}\includegraphics[width=\textwidth]{figures/speedup_evaluation.pdf}\caption{Evaluation}\end{subfigure}
+\caption{Speedup $T(n_0)/T(n)$ of each stage against the number of executors. Dotted lines: ideal speedup $n/n_0$ for $n_0=8$ (1, 5, 10\%) and $n_0=40$ (25\%). Panel (b) is an addition to the three required figures.}
+\label{fig:speedup}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}llrcccc@{}}
+\hline
+Fraction & Executors & Ideal & Preprocessing & Prep.\ without listing & Training & Evaluation \\
+\hline
+\input{tables/tab_speedup.tex}
+\end{tabular}
+\caption{Speedup (parallel efficiency) between the smallest and the largest number of executors.}
+\label{tab:speedup}
+\end{table}
+
+\paragraph{Training.} Training is the stage that scales, and its scalability improves as the data fraction increases. On 60 executors, training is 3.6, 4.3 and 5.1 times faster than on 8 executors for the 1\%, 5\% and 10\% fractions, respectively, corresponding to parallel efficiencies of 48\%, 58\% and 68\%. For the 25\% fraction, it is 1.26 times faster on 60 executors than on 40, achieving 84\% of the ideal speedup of 1.5. Up to 20 executors, scaling is close to linear, with speedups of 2.2 to 2.6 for a 2.5-fold increase in executors. Training also accounts for 85--95\% of the total execution time, making it the stage with the greatest potential for parallelisation.
+
+\paragraph{Preprocessing.} Preprocessing speeds up by only 1.2 to 2.1 times on 60 executors. This is partly because file listing is not shortened by adding executors. It takes 31--33 s at 1\% and 34--52 s at 5--25\%, almost independently of the number of executors. On 60 executors, file listing accounts for 48--75\% of the total preprocessing time. Excluding file listing, preprocessing speedups increase to 1.7, 2.5 and 3.4 times for the 1\%, 5\% and 10\% fractions, respectively.
+
+\paragraph{Evaluation.} Evaluation takes between 2 and 27 s and scales by 1.6 to 3.7 times. Given its relatively short duration, its execution time is strongly influenced by the slowest task, which takes 3--5 times longer than the median task for the 5--25\% fractions.
+
+\paragraph{Total execution time.} Figure~\ref{fig:total} shows the total execution time of each run (preprocessing, training and evaluation combined) against the number of executors, together with the corresponding speedup. The time axis is logarithmic because the data fractions differ by a factor of 25. For all fractions, execution time decreases rapidly up to 20 executors and then more gradually. As expected, the larger data fractions consistently take longer to process.
+
+Since training accounts for 85--95\% of the total execution time, the overall scaling largely follows the training curve. The total execution time is 2.5, 3.7 and 4.5 times shorter on 60 executors than on 8 for the 1\%, 5\% and 10\% fractions, respectively, corresponding to parallel efficiencies of 33\%, 50\% and 61\%. For the 25\% fraction, it is 1.24 times shorter on 60 executors than on 40. The overall speedup is lower than the training speedup because preprocessing, which scales less efficiently, accounts for a larger share of the total execution time as more executors are added. Like the individual stage curves, overall scaling efficiency improves with the data fraction, reflecting the Amdahl's law behaviour discussed in Section~\ref{sec:why}.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}\includegraphics[width=\textwidth]{figures/time_total.pdf}\caption{Total execution time}\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}\includegraphics[width=\textwidth]{figures/speedup_total.pdf}\caption{Speedup of the total time}\end{subfigure}
+\caption{Total execution time (a) and its speedup $T(n_0)/T(n)$ (b) against the number of executors. Dotted gray lines in (b): ideal speedup, as in Figure~\ref{fig:speedup}.}
+\label{fig:total}
+\end{figure}
+
+\section{Discussion}
+\label{sec:why}
+
+\subsection{Curve Analysis}
+Amdahl's law (Amdahl, 1967) helps explain the general shape of the scaling curves. The execution time of each stage consists of a part that can be distributed across executors, such as reading and processing partitions or building trees, and a part that does not decrease as more executors are added, such as listing files on the driver, starting stages and combining results. Adding executors only reduces the parallelisable part, so the speedup eventually flattens as the fixed part becomes a larger share of the total execution time.
+
+As the dataset grows, the parallelisable workload increases while the fixed overhead remains relatively unchanged. Consequently, parallel efficiency improves with the size of the dataset. This is what we observe for both training and the overall pipeline, and it suggests that larger fractions, such as the 50\% and 100\% runs conducted by the instructor, are expected to scale better. In preprocessing, the fixed component is mainly the driver-side file listing.
+
+\subsection{Speedup of Training}
+From the task metrics, the measured speedup can be expressed as the ideal speedup multiplied by the change in core utilisation and divided by the growth in total core time for the stage (Table~\ref{tab:work}). Core utilisation is calculated as executor run time divided by wall time multiplied by the number of cores. Between 8 and 60 executors, utilisation decreases by 2--17 percentage points, while total core time increases by 17--67\%. For example, at 5\%, it increases from 17,100 to 26,200 core-seconds. CPU time grows by approximately the same amount, indicating that the additional work is computational rather than time spent waiting. One possible explanation is the way random forest training operates. It makes multiple passes over the cached data, with each pass involving synchronisation. Adding executors increases the number of smaller tasks that need to start and finish, potentially adding coordination overhead.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{@{}llrccc@{}}
+\hline
+Fraction & Executors & Ideal & Core utilisation & Core-time growth & Measured speedup \\
+\hline
+\input{tables/tab_work.tex}
+\end{tabular}
+\caption{Training: measured speedup $=$ ideal $\times$ (utilisation ratio) $/$ (core-time growth).}
+\label{tab:work}
+\end{table}
+
+Experiments C and D tested two possible explanations for the reduced efficiency. First, changing the number of partitions increased utilisation by only a few percentage points and changed total execution time by less than 3\% (Table~\ref{tab:partitions}), suggesting that partition count is not the main cause. Second, the comparison between 24 and 32 nodes (Table~\ref{tab:nodes}) points towards executors sharing nodes. At the same executor count, total core time was 15\% higher with 24 hosts than with 31. However, we did not isolate which shared resource is responsible for this increase. This is therefore the main hypothesis we would investigate next, by keeping the partition count fixed while varying the number of executors per node.
+
+\subsection{Expected Behaviour on 50 and 100\% of the Data}
+The file-listing time remains relatively constant at around 50 s, becoming negligible compared with stages that take several minutes. The partition count is also governed by the 256 MB maximum partition size, which does not increase with the number of executors. Furthermore, training efficiency improves with the data fraction, rising from 48\% to 58\%, 68\% and 84\%. These observations suggest that larger data fractions should scale more efficiently. Based on a linear extrapolation of the 25\% run on 60 executors (831 s), processing the full dataset would take approximately 55 minutes. This is an extrapolated estimate, not a measured result.
 
 
+\section{Challenges and Solutions}
+\label{sec:challenges}
 
-	\section{Tools}
-	
-	\section{Methodology}
-	
-	\subsection{Sampling}
-	
-	Each Parquet file corresponds to one patch, so a fraction of the dataset is defined as a fraction of
-	the files of each split. Sampling files rather than points avoids reading the whole dataset before
-	sampling it. For each split, the list of files is sorted, shuffled once with a fixed seed, and the
-	first $k$ files are kept, where $k$ is the requested percentage of the files. As the list is shuffled
-	only once, the samples are nested: the 1\% sample is included in the 2\% sample, which is included in
-	the 5\% sample, and so on. Runs with different fractions are therefore comparable. Only the columns
-	needed for the features and the label are read, which Parquet supports natively. The same fraction is
-	applied to the training and test sets.
-	
-	\subsection{Preprocessing and Features}
-	
-	\subsection{Model}
-	
-	\subsection{Evaluation Metrics}
-	
-	\subsection{Cluster}
-	
-	\subsection{Executor Configuration}
-	
-	\subsection{Experiments}
-	
-	\section{Results}
+\subsection{Challenges Encountered}
+\begin{itemize}
+\item \textbf{A fast but meaningless run.} The pilot run scaled almost linearly, but the model predicted a single class. Timings are only meaningful if the model learns, so we checked the quality of every run (overall accuracy, per-class IoU and the confusion matrix, which are stored with the times) before using its timings.
+\item \textbf{Lazy evaluation hid the cost of preprocessing.} The training time included the feature computation. We cache the features and force them with a \texttt{count} inside the preprocessing timer.
+\item \textbf{Requested executors are not always granted.} YARN can grant fewer executors than requested: it gave 47 executors for three runs that requested 48. We now wait for all executors (up to 120 s), count the registered executors at the start and after each stage, and use the smallest value as the x-coordinate.
+\item \textbf{Too few tasks.} Spark's default gave about one partition per core in the first runs, so stages ended with their slowest task. A minimum number of input partitions per core addressed this (Experiment C).
+\item \textbf{File listing.} Sampling by file means listing thousands of files, 31 to 52 s whatever the cluster size. We report it as a separate item and draw the preprocessing speedup with and without it.
+\item \textbf{sparkMeasure.} The first runs of the 24-node cluster at 1\% have no task metrics because the library could not be loaded; we switched to the artefact built for the Scala version of the cluster's Spark. Later runs have them. % CHECK: confirm the cause (Scala 2.12 vs 2.13 artefact)
+\item \textbf{Limited cluster time.} Access to the large cluster was limited, so each configuration was run once and the matrix was prioritised: the 25\% fraction was run on 40 and 60 executors only. The only indication of run-to-run variation comes from the repeated 5\% configurations on the two clusters, which differ by 1 to 4\% on 8 and 20 executors.
+\item \textbf{A cluster of changing size.} The cluster had 10, 24 and 32 nodes in different rounds. The speedup curves therefore use the final 32-node runs only; the earlier runs serve for the comparisons of Experiments C and D.
+\item \textbf{Rare classes.} Class weights did not help the rare classes and lowered the ground IoU, so they were removed. A model with neighbourhood information is needed for these classes, which was outside the scope of a scaling study.
+\end{itemize}
 
-	\subsection{Classification Quality}
+\subsection{Optimisations Adopted Without Individual Testing}
+Some choices come from the Spark documentation and the course slides, and were not compared with an alternative because of the limited cluster time. We verified only that they did not cause problems (no spill, low garbage-collection time):
+\begin{itemize}
+\item the minimum height of each patch is broadcast, so the large table is joined without a shuffle;
+\item features use built-in Spark expressions instead of Python functions, and only the nine needed Parquet columns are read;
+\item Kryo serialisation, speculative execution and adaptive query execution (128 MB target), with shuffle partitions set to four per core (Table~\ref{tab:settings});
+\item the cached features can spill to disk, so that a larger fraction would not fail if memory is short; in our runs no spill occurred, so this was not exercised.
+\end{itemize}
 
-	\subsection{Scalability}
-	
-	\section{Conclusion}
+\subsection{Local Experiments on a Small Fraction}
+Because cluster time was limited, we considered exploring configurations locally on a small fraction of the data, and keeping the cluster for the final runs. We did not pursue it. A local run cannot show whether a setting will scale on larger nodes, which is what our study measures: the speedup depends on the cluster (number of nodes and executors per node, network, reading from S3), and small fractions are dominated by fixed costs, as our 1\% runs show (file listing and stage start-up). A configuration that looks better locally on a small fraction would therefore not tell us how it behaves on the cluster, so all configurations were evaluated on the cluster.
 
-	
-	
-	
+\section{Conclusion}
+
+We built a PySpark pipeline that samples patches, computes ten per-point features, trains a random forest and computes the OA, IoU and mIoU, with each stage timed separately. A pilot run and four rounds of experiments led to the final configuration: the first showed that the forest dominates the cost, the second fixed the Spark settings and the model size, the third showed that the partition count is not the main lever, and the fourth gave the scaling curves. Training is 3.6 to 5.1 times faster on 60 than on 8 executors with an efficiency that grows with the data, preprocessing is bounded by a fixed listing cost, and the remaining loss in training is linked to the growth of the work when executors share nodes. For future work, neighbourhood features would help the rare classes, and holding the partition count fixed while varying the executors per node would isolate the effect of node sharing.
+
+\section*{References}
+\small
+\begin{description}\setlength{\itemsep}{0pt}
+\item Amdahl, G.\ M.\ (1967). Validity of the single processor approach to achieving large scale computing capabilities. \textit{AFIPS Spring Joint Computer Conference}, 483--485.
+\item Amazon Web Services (2024). Amazon EMR documentation. \url{https://docs.aws.amazon.com/emr/}
+\item Apache Spark (2024a). Apache Spark documentation. \url{https://spark.apache.org/docs/latest/}
+\item Apache Spark (2024b). Performance tuning, in \textit{Spark SQL Guide}. \url{https://spark.apache.org/docs/latest/sql-performance-tuning.html}
+\item Armbrust, M., et al.\ (2015). Spark SQL: relational data processing in Spark. \textit{ACM SIGMOD}, 1383--1394.
+\item Breiman, L.\ (2001). Random forests. \textit{Machine Learning}, 45(1), 5--32.
+\item Canali, L.\ (CERN). sparkMeasure. \url{https://github.com/LucaCanali/sparkMeasure}
+\item Gaydon, C., Daab, M., \& Roche, F.\ (2024). FRACTAL: an ultra-large-scale aerial lidar dataset for 3D semantic segmentation of diverse landscapes. arXiv:2405.04634.
+\item Meng, X., et al.\ (2016). MLlib: machine learning in Apache Spark. \textit{JMLR}, 17(34), 1--7.
+\item Vavilapalli, V.\ K., et al.\ (2013). Apache Hadoop YARN: yet another resource negotiator. \textit{ACM SoCC}, 5:1--5:16.
+\item Zaharia, M., et al.\ (2016). Apache Spark: a unified engine for big data processing. \textit{Communications of the ACM}, 59(11), 56--65.
+\end{description}
+
 \end{document}
